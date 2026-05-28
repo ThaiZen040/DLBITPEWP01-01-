@@ -1,4 +1,10 @@
 package de.thaizen.webforum.model;
 
-public class Role {
+public enum Role {
+
+    USER,
+    MODERATOR,
+    ADMIN
+
 }
+
