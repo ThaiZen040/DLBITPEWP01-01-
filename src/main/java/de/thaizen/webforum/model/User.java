@@ -5,6 +5,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
+import java.time.LocalDateTime;
+
 @Entity
 public class User {
 
@@ -17,6 +19,7 @@ public class User {
     private String email;
     private String role;
     private String token;
+    private LocalDateTime createdAt;
 
     // Leerer Konstruktor für Spring/JPA
     public User() {
