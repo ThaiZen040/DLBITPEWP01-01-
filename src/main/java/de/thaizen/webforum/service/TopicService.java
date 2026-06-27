@@ -9,9 +9,10 @@ import java.util.List;
 
 @Service
 public class TopicService {
-
+    //Zugriff auf die Datenbank
     private final TopicRepository topicRepository;
 
+    // Dependency Injection
     public TopicService(TopicRepository topicRepository) {
         this.topicRepository = topicRepository;
     }
