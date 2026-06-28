@@ -8,30 +8,31 @@ import java.util.List;
 
 @Service
 public class PostService {
-    // Zugriff auf die Datenbank
+
     private final PostRepository postRepository;
 
-    //Konstruktor
-    public  PostService(PostRepository postRepository) {
+    public PostService(PostRepository postRepository) {
         this.postRepository = postRepository;
     }
-    public Post createPost(Post post)
-    {
+
+    public Post createPost(Post post) {
         return postRepository.save(post);
     }
 
-    public Post  updatePost(Post post)
-    {
+    public Post updatePost(Post post) {
         return postRepository.save(post);
     }
 
-    public Post findPostById(long id)
-    { if  (postRepository.findById(id).isPresent())
-        return postRepository.findById(id).get();
+    public Post findPostById(long id) {
+        return postRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Post nicht gefunden mit ID: " + id));
     }
 
     public List<Post> findAllPosts() {
         return postRepository.findAll();
     }
 
+    public void deletePost(long id) {
+        postRepository.deleteById(id);
+    }
 }
