@@ -8,8 +8,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/posts")
 public class PostController {
 
+    //Zugriff auf die Geschäftslogik
     private final PostService postService;
 
+    // Dependency Injection
     public PostController(PostService postService) {
         this.postService = postService;
     }

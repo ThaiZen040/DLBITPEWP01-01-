@@ -9,8 +9,10 @@ import java.util.List;
 @Service
 public class PostService {
 
+    // Zugriff Datenbank
     private final PostRepository postRepository;
 
+    //DP Injection
     public PostService(PostRepository postRepository) {
         this.postRepository = postRepository;
     }
