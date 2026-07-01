@@ -4,7 +4,7 @@ import de.thaizen.webforum.model.Topic;
 import de.thaizen.webforum.service.TopicService;
 import org.springframework.web.bind.annotation.*;
 
-//
+
 @RestController
 @RequestMapping("/topics")
 public class TopicController {
@@ -24,7 +24,7 @@ public class TopicController {
     }
     // Ruft den Service auf, um ein neues Thema zu erstellen
     @PostMapping
-    public Topic createTopic(@RequestBody Topic topic) { // Spring benoetigt @RequestBody, um den Inhalt der Anfrage zu lesen
+    public Topic createTopic(@RequestBody Topic topic) { // Spring benötigt @RequestBody, um den Inhalt der Anfrage zu lesen
         return topicService.createTopic(topic);
     }
 
