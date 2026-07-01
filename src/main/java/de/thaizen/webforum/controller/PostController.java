@@ -38,7 +38,6 @@ public class PostController {
     // PUT: Beitrag bearbeiten
     @PutMapping("/{id}")
     public Post updatePost(@PathVariable Long id, @RequestBody Post post) {
-        post.setId(id);
         return postService.updatePost(post);
     }
 
