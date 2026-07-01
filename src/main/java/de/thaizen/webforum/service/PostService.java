@@ -30,6 +30,10 @@ public class PostService {
                 .orElseThrow(() -> new RuntimeException("Post nicht gefunden mit ID: " + id));
     }
 
+    public void deletePost(Long id) {
+        postRepository.deleteById(id);
+    }
+
     public List<Post> findAllPosts() {
         return postRepository.findAll();
     }
