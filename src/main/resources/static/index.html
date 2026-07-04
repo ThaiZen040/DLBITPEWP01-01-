@@ -1,22 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Technologie Forum</title>
-
-    <link rel="stylesheet" href="style.css">
-
+    <title>Webforum</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<header>
-    <h2> Technologie Forum</h2>
-</header>
 <body>
-    <main>
-        <section>
-            <h2> Was findest du hier? </h2>
-            <p> Technologie entwickelt sich immer weiter</p>
-        </section>
-    </main>
 
+<header class="header">
+    <h1>Webforum</h1>
+    <nav>
+        <a href="#">Start</a>
+        <a href="#">Login</a>
+        <a href="#">Registrieren</a>
+    </nav>
+</header>
+
+<main class="container">
+
+    <section class="intro">
+        <h2>Willkommen im Webforum</h2>
+        <p>Hier können Nutzer Themen lesen, erstellen und Beiträge verfassen.</p>
+    </section>
+
+    <section class="actions">
+        <button id="loadTopicsButton">Themen laden</button>
+        <button id="createTopicButton">Neues Thema</button>
+    </section>
+
+    <section class="topic-form hidden" id="topicForm">
+        <h2>Neues Thema erstellen</h2>
+
+        <input type="text" id="topicTitle" placeholder="Titel des Themas">
+        <textarea id="topicContent" placeholder="Beschreibung"></textarea>
+
+        <button id="saveTopicButton">Speichern</button>
+    </section>
+
+    <section class="topics">
+        <h2>Forum-Übersicht</h2>
+        <div id="topicList">
+            <p>Noch keine Themen geladen.</p>
+        </div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <p>2026 Webforum MVP</p>
+</footer>
+
+<script src="js/app.js"></script>
 </body>
 </html>
