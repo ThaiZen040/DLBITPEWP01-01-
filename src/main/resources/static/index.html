@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Webforum</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -17,24 +18,28 @@
 </header>
 
 <main class="container">
-
     <section class="intro">
         <h2>Willkommen im Webforum</h2>
         <p>Hier können Nutzer Themen lesen, erstellen und Beiträge verfassen.</p>
     </section>
 
     <section class="actions">
-        <button id="loadTopicsButton">Themen laden</button>
-        <button id="createTopicButton">Neues Thema</button>
+        <button type="button" id="loadTopicsButton">Themen laden</button>
+        <button type="button" id="createTopicButton">Neues Thema</button>
     </section>
 
     <section class="topic-form hidden" id="topicForm">
         <h2>Neues Thema erstellen</h2>
 
-        <input type="text" id="topicTitle" placeholder="Titel des Themas">
-        <textarea id="topicContent" placeholder="Beschreibung"></textarea>
+        <form>
+            <label for="topicTitle">Titel des Themas</label>
+            <input type="text" id="topicTitle" placeholder="Titel des Themas">
 
-        <button id="saveTopicButton">Speichern</button>
+            <label for="topicContent">Beschreibung</label>
+            <textarea id="topicContent" placeholder="Beschreibung"></textarea>
+
+            <button type="button" id="saveTopicButton">Speichern</button>
+        </form>
     </section>
 
     <section class="topics">
@@ -43,7 +48,6 @@
             <p>Noch keine Themen geladen.</p>
         </div>
     </section>
-
 </main>
 
 <footer class="footer">
