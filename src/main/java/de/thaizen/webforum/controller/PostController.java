@@ -29,12 +29,6 @@ public class PostController {
         return postService.findAllPosts();
     }
 
-    // GET: Einzelnen Beitrag nach ID anzeigen
-    @GetMapping("/{id}")
-    public Post getPostById(@PathVariable Long id) {
-        return postService.findPostById(id);
-    }
-
     // PUT: Beitrag bearbeiten
     @PutMapping("/{id}")
     public Post updatePost(@PathVariable Long id, @RequestBody Post post) {

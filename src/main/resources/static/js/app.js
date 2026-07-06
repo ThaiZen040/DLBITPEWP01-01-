@@ -6,13 +6,11 @@ const state = {
     editingPostId: null
 };
 
-const apiBaseUrl = resolveApiBaseUrl();
-
 const endpoints = {
-    topics: buildEndpointUrl("topics"),
-    posts: buildEndpointUrl("posts"),
-    register: buildEndpointUrl("register"),
-    login: buildEndpointUrl("login")
+    topics: "/topics",
+    posts: "/posts",
+    register: "/register",
+    login: "/login"
 };
 
 const pageType = document.body?.dataset?.page ?? "home";
@@ -22,7 +20,6 @@ const elements = {
     currentUserPanel: document.getElementById("currentUserPanel"),
     activeUserState: document.getElementById("activeUserState"),
     loadTopicsButton: document.getElementById("loadTopicsButton"),
-    refreshButton: document.getElementById("refreshButton"),
     loginForm: document.getElementById("loginForm"),
     registerForm: document.getElementById("registerForm"),
     topicForm: document.getElementById("topicForm"),
@@ -33,7 +30,6 @@ const elements = {
     topicId: document.getElementById("topicId"),
     topicTitle: document.getElementById("topicTitle"),
     topicContent: document.getElementById("topicContent"),
-    topicClosed: document.getElementById("topicClosed"),
     saveTopicButton: document.getElementById("saveTopicButton"),
     cancelTopicEditButton: document.getElementById("cancelTopicEditButton"),
     postId: document.getElementById("postId"),
@@ -56,7 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function wireEvents() {
     addListener(elements.loadTopicsButton, "click", loadForumData);
-    addListener(elements.refreshButton, "click", loadForumData);
     addListener(elements.loginForm, "submit", handleLogin);
     addListener(elements.registerForm, "submit", handleRegistration);
     addListener(elements.topicForm, "submit", handleTopicSubmit);
@@ -74,10 +69,6 @@ function addListener(element, eventName, handler) {
 
 function isForumPage() {
     return pageType === "home";
-}
-
-function isAuthPage() {
-    return pageType === "auth";
 }
 
 async function loadForumData() {
@@ -131,10 +122,7 @@ async function handleLogin(event) {
         renderCurrentUser();
         renderStats();
         event.currentTarget.reset();
-        showAlert("success", isAuthPage()
-            ? `Willkommen zurueck, ${safeUser.username}. Du wirst jetzt zum Forum weitergeleitet.`
-            : `Willkommen zurueck, ${safeUser.username}.`);
-        redirectToForumAfterAuth();
+        showAlert("success", `Willkommen zurueck, ${safeUser.username}.`);
     } catch (error) {
         showAlert("danger", `Login fehlgeschlagen: ${error.message}`);
     } finally {
@@ -149,8 +137,7 @@ async function handleRegistration(event) {
     const payload = {
         username: formData.get("username").toString().trim(),
         email: formData.get("email").toString().trim(),
-        passwordHash: formData.get("password").toString(),
-        role: formData.get("role").toString()
+        passwordHash: formData.get("password").toString()
     };
 
     try {
@@ -169,10 +156,7 @@ async function handleRegistration(event) {
         renderCurrentUser();
         renderStats();
         event.currentTarget.reset();
-        showAlert("success", isAuthPage()
-            ? `Benutzer ${safeUser.username} wurde erstellt. Du wirst jetzt zum Forum weitergeleitet.`
-            : `Benutzer ${safeUser.username} wurde erstellt und als aktiver User gesetzt.`);
-        redirectToForumAfterAuth();
+        showAlert("success", `Benutzer ${safeUser.username} wurde erstellt und als aktiver User gesetzt.`);
     } catch (error) {
         showAlert("danger", `Registrierung fehlgeschlagen: ${error.message}`);
     } finally {
@@ -197,8 +181,7 @@ async function handleTopicSubmit(event) {
         content: formData.get("content").toString().trim(),
         author: buildUserReference(existingTopic?.author ?? state.currentUser),
         createdAt: existingTopic?.createdAt ?? timestamp,
-        updatedAt: timestamp,
-        closed: formData.get("closed") === "on"
+        updatedAt: timestamp
     };
 
     const url = topicId ? `${endpoints.topics}/${topicId}` : endpoints.topics;
@@ -314,15 +297,12 @@ function renderTopics() {
         const authorName = topic.author?.username ?? "Gast";
         const createdAt = formatDate(topic.createdAt);
         const updatedAt = formatDate(topic.updatedAt);
-        const statusClass = topic.closed ? "text-bg-secondary" : "text-bg-success";
-        const statusText = topic.closed ? "Geschlossen" : "Offen";
 
         return `
             <article class="topic-card">
                 <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
                     <div>
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                            <span class="badge ${statusClass}">${statusText}</span>
                             <span class="badge text-bg-light border">#${topic.id ?? "neu"}</span>
                         </div>
                         <h3 class="h4 mb-2">${escapeHtml(topic.title ?? "Ohne Titel")}</h3>
@@ -448,17 +428,10 @@ function renderCurrentUser() {
                         <strong class="d-block">${escapeHtml(user.username)}</strong>
                         <span class="text-secondary">${escapeHtml(user.email ?? "Keine E-Mail")}</span>
                     </div>
-                    <span class="badge text-bg-primary">${escapeHtml(user.role ?? "USER")}</span>
                 </div>
                 <div class="small text-secondary mt-3">ID: ${escapeHtml(String(user.id))}</div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill mt-3" id="logoutButton">Logout</button>
         `;
-
-        const logoutButton = document.getElementById("logoutButton");
-        if (logoutButton) {
-            logoutButton.addEventListener("click", logoutCurrentUser);
-        }
     }
 
     if (elements.activeUserState) {
@@ -482,7 +455,7 @@ function renderStats() {
 
 function startTopicEdit(topicId) {
     const topic = state.topics.find((entry) => Number(entry.id) === topicId);
-    if (!topic || !canManageTopic(topic) || !elements.topicId || !elements.topicTitle || !elements.topicContent || !elements.topicClosed || !elements.saveTopicButton || !elements.cancelTopicEditButton) {
+    if (!topic || !canManageTopic(topic) || !elements.topicId || !elements.topicTitle || !elements.topicContent || !elements.saveTopicButton || !elements.cancelTopicEditButton) {
         showAlert("warning", "Dieses Thema darfst du nicht bearbeiten.");
         return;
     }
@@ -491,7 +464,6 @@ function startTopicEdit(topicId) {
     elements.topicId.value = String(topicId);
     elements.topicTitle.value = topic.title ?? "";
     elements.topicContent.value = topic.content ?? "";
-    elements.topicClosed.checked = Boolean(topic.closed);
     elements.saveTopicButton.textContent = "Thema aktualisieren";
     elements.cancelTopicEditButton.classList.remove("d-none");
 
@@ -611,16 +583,6 @@ async function deletePost(postId) {
     }
 }
 
-function logoutCurrentUser() {
-    state.currentUser = null;
-    clearStoredUser();
-    resetTopicForm();
-    resetPostForm();
-    renderCurrentUser();
-    renderStats();
-    showAlert("info", "Du wurdest abgemeldet.");
-}
-
 function canManageTopic(topic) {
     return canManageEntity(topic.author);
 }
@@ -634,15 +596,7 @@ function canManageEntity(author) {
         return false;
     }
 
-    if (isPrivilegedUser(state.currentUser)) {
-        return true;
-    }
-
     return Number(author?.id) === Number(state.currentUser.id);
-}
-
-function isPrivilegedUser(user) {
-    return user?.role === "ADMIN" || user?.role === "MODERATOR";
 }
 
 function updateStatus(message) {
@@ -673,10 +627,11 @@ function showAlert(type, message) {
 }
 
 async function requestJson(url, options = {}) {
-    const response = await performRequest(url, options);
+    const response = await fetch(url, options);
 
     if (!response.ok) {
-        throw new Error(await buildRequestErrorMessage(response, url));
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
     }
 
     const contentType = response.headers.get("content-type") ?? "";
@@ -688,10 +643,11 @@ async function requestJson(url, options = {}) {
 }
 
 async function requestVoid(url, options = {}) {
-    const response = await performRequest(url, options);
+    const response = await fetch(url, options);
 
     if (!response.ok) {
-        throw new Error(await buildRequestErrorMessage(response, url));
+        const errorText = await response.text();
+        throw new Error(errorText || `HTTP ${response.status}`);
     }
 }
 
@@ -704,91 +660,6 @@ function setFormLoading(form, isLoading) {
     fields.forEach((field) => {
         field.disabled = isLoading;
     });
-}
-
-function redirectToForumAfterAuth() {
-    if (!isAuthPage()) {
-        return;
-    }
-
-    window.setTimeout(() => {
-        window.location.assign("index.html");
-    }, 900);
-}
-
-function buildEndpointUrl(path) {
-    return new URL(path, `${apiBaseUrl}/`).toString();
-}
-
-function resolveApiBaseUrl() {
-    const { protocol, hostname, port, origin } = window.location;
-
-    if ((hostname === "localhost" || hostname === "127.0.0.1") && port && port !== "8080") {
-        return `${protocol}//${hostname}:8080`;
-    }
-
-    return origin;
-}
-
-async function performRequest(url, options = {}) {
-    try {
-        return await fetch(url, options);
-    } catch (error) {
-        throw new Error(buildNetworkErrorMessage(url, error));
-    }
-}
-
-async function buildRequestErrorMessage(response, url) {
-    const responseText = await response.text();
-    const contentType = response.headers.get("content-type") ?? "";
-
-    if (response.status === 404) {
-        return buildNotFoundMessage(url, responseText, contentType);
-    }
-
-    if (contentType.includes("text/html")) {
-        return `Der Server hat statt JSON eine HTML-Seite zurueckgegeben (HTTP ${response.status}). Bitte pruefe, ob das Frontend ueber die Spring-Boot-App unter http://localhost:8080 laeuft.`;
-    }
-
-    return responseText || `HTTP ${response.status}`;
-}
-
-function buildNotFoundMessage(url, responseText, contentType) {
-    const requestedPath = safePathname(url);
-    const currentLocation = `${window.location.origin}${window.location.pathname}`;
-
-    if (contentType.includes("text/html")) {
-        return `API-Endpunkt ${requestedPath} wurde nicht gefunden. Oeffne das Frontend ueber die Spring-Boot-Anwendung unter http://localhost:8080 und nicht ueber einen reinen HTML-Preview. Aktuell geoeffnet: ${currentLocation}`;
-    }
-
-    return responseText || `API-Endpunkt ${requestedPath} wurde nicht gefunden.`;
-}
-
-function buildNetworkErrorMessage(url, error) {
-    const apiOrigin = safeOrigin(url);
-    const fallback = "Die API ist nicht erreichbar. Bitte pruefe, ob die Spring-Boot-App auf http://localhost:8080 laeuft.";
-
-    if (!apiOrigin) {
-        return error?.message || fallback;
-    }
-
-    return `Die API unter ${apiOrigin} ist nicht erreichbar. Bitte pruefe, ob die Spring-Boot-App auf http://localhost:8080 laeuft.`;
-}
-
-function safePathname(url) {
-    try {
-        return new URL(url, document.baseURI).pathname;
-    } catch {
-        return String(url);
-    }
-}
-
-function safeOrigin(url) {
-    try {
-        return new URL(url, document.baseURI).origin;
-    } catch {
-        return "";
-    }
 }
 
 function buildUserReference(user) {
@@ -865,16 +736,11 @@ function persistUser(user) {
     window.localStorage.setItem("webforum-current-user", JSON.stringify(user));
 }
 
-function clearStoredUser() {
-    window.localStorage.removeItem("webforum-current-user");
-}
-
 function sanitizeUser(user) {
     return {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
         createdAt: user.createdAt
     };
 }

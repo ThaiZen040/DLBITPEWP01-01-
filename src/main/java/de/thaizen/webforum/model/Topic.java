@@ -22,7 +22,6 @@ public class Topic {
     private User author;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private boolean closed;
 
     // Leerer Konstruktor für Spring/JPA
     public Topic() {
@@ -35,7 +34,6 @@ public class Topic {
         this.author = author;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        this.closed = false;
     }
 
     // Getter
@@ -67,10 +65,6 @@ public class Topic {
         return updatedAt;
     }
 
-    public boolean isClosed() {
-        return closed;
-    }
-
     // Setter
     public void setTitle(String title) {
         this.title = title;
@@ -94,9 +88,4 @@ public class Topic {
         this.updatedAt = updatedAt;
     }
 
-    public void setClosed(boolean closed) {
-        this.closed = closed;
-        this.updatedAt = LocalDateTime.now();
-    }
 }
-

@@ -28,9 +28,6 @@
                     <li class="nav-item"><a class="nav-link" href="#topicComposer">Thema erstellen</a></li>
                     <li class="nav-item"><a class="nav-link" href="#postComposer">Beitrag schreiben</a></li>
                     <li class="nav-item"><a class="nav-link" href="auth.html#registerCard">Registrieren</a></li>
-                    <li class="nav-item">
-                        <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" id="refreshButton">Aktualisieren</button>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -140,12 +137,6 @@
                                 <label class="form-label" for="topicContent">Beschreibung</label>
                                 <textarea class="form-control" id="topicContent" name="content" rows="5" required></textarea>
                             </div>
-                            <div class="col-sm-6">
-                                <div class="form-check form-switch mt-sm-4 pt-sm-2">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="topicClosed" name="closed">
-                                    <label class="form-check-label" for="topicClosed">Thema sofort schliessen</label>
-                                </div>
-                            </div>
                             <div class="col-sm-6 d-grid">
                                 <button class="btn btn-primary rounded-pill" id="saveTopicButton" type="submit">Thema speichern</button>
                             </div>
@@ -189,7 +180,7 @@
     <footer class="footer-section py-4 mt-5">
         <div class="container d-flex flex-column flex-md-row justify-content-between gap-2">
             <span>Webforum MVP auf Basis von Spring Boot, H2 und Bootstrap.</span>
-            <span>Frontend aktualisiert fuer den Browser-Test der REST-Endpunkte.</span>
+            <span>Frontend fuer Login, Registrierung, Themen und Beitraege.</span>
         </div>
     </footer>
 </div>

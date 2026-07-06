@@ -34,19 +34,12 @@ public class TopicService {
         return topicRepository.findAll();
     }
 
-    public Topic getTopicById(Long id) {
-        return topicRepository.findById(id)
-                .orElse(null);
-    }
-
     public Topic updateTopic(Long id, Topic topic) {
         Topic existingTopic = topicRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Thema nicht gefunden."));
 
         existingTopic.setTitle(topic.getTitle());
         existingTopic.setContent(topic.getContent());
-        existingTopic.setClosed(topic.isClosed());
-
         if (topic.getAuthor() != null) {
             existingTopic.setAuthor(topic.getAuthor());
         }
@@ -54,16 +47,6 @@ public class TopicService {
         existingTopic.setUpdatedAt(LocalDateTime.now());
 
         return topicRepository.save(existingTopic);
-    }
-
-    public void closeTopic(Long id) {
-        Topic topic = topicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Thema nicht gefunden."));
-
-        topic.setClosed(true);
-        topic.setUpdatedAt(LocalDateTime.now());
-
-        topicRepository.save(topic);
     }
 
     @Transactional
