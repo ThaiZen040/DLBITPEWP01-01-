@@ -1,3 +1,4 @@
+// Zentraler Frontend-Zustand: geladene Forumdaten, aktiver Benutzer und Editiermodus.
 const state = {
     topics: [],
     posts: [],
@@ -6,6 +7,7 @@ const state = {
     editingPostId: null
 };
 
+// REST-Endpunkte des Spring-Boot-Backends.
 const endpoints = {
     topics: "/topics",
     posts: "/posts",
@@ -13,8 +15,10 @@ const endpoints = {
     login: "/login"
 };
 
+// Die gleiche JavaScript-Datei wird auf index.html und auth.html benutzt.
 const pageType = document.body?.dataset?.page ?? "home";
 
+// Alle wichtigen DOM-Elemente werden einmal gesammelt, damit die Funktionen lesbarer bleiben.
 const elements = {
     alertHost: document.getElementById("alertHost"),
     currentUserPanel: document.getElementById("currentUserPanel"),
@@ -40,6 +44,7 @@ const elements = {
     systemStatus: document.getElementById("systemStatus")
 };
 
+// Initialisierung nach dem Laden der HTML-Seite.
 document.addEventListener("DOMContentLoaded", () => {
     wireEvents();
     renderCurrentUser();
@@ -50,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// Verbindet Buttons und Formulare mit den passenden JavaScript-Funktionen.
 function wireEvents() {
     addListener(elements.loadTopicsButton, "click", loadForumData);
     addListener(elements.loginForm, "submit", handleLogin);
@@ -61,6 +67,7 @@ function wireEvents() {
     addListener(elements.topicList, "click", handleTopicListClick);
 }
 
+// Manche Elemente existieren nur auf einer der beiden Seiten. Diese Hilfsfunktion verhindert Fehler.
 function addListener(element, eventName, handler) {
     if (element) {
         element.addEventListener(eventName, handler);
@@ -71,6 +78,7 @@ function isForumPage() {
     return pageType === "home";
 }
 
+// Laedt Themen und Beitraege parallel vom Backend und aktualisiert danach die Oberflaeche.
 async function loadForumData() {
     updateStatus("Daten werden geladen...");
 
@@ -97,6 +105,7 @@ async function loadForumData() {
     }
 }
 
+// Sendet die Login-Daten an das Backend und setzt den angemeldeten Benutzer als aktiven User.
 async function handleLogin(event) {
     event.preventDefault();
 
@@ -130,6 +139,7 @@ async function handleLogin(event) {
     }
 }
 
+// Sendet Registrierungsdaten an das Backend und nutzt den neuen Benutzer direkt als aktiven User.
 async function handleRegistration(event) {
     event.preventDefault();
 
@@ -164,6 +174,7 @@ async function handleRegistration(event) {
     }
 }
 
+// Erstellt ein neues Thema oder aktualisiert ein bestehendes Thema, wenn gerade editiert wird.
 async function handleTopicSubmit(event) {
     event.preventDefault();
 
@@ -207,6 +218,7 @@ async function handleTopicSubmit(event) {
     }
 }
 
+// Erstellt einen Beitrag oder aktualisiert einen bestehenden Beitrag im Bearbeitungsmodus.
 async function handlePostSubmit(event) {
     event.preventDefault();
 
@@ -257,6 +269,7 @@ async function handlePostSubmit(event) {
     }
 }
 
+// Wertet Klicks in der Themenliste aus, z. B. Bearbeiten oder Loeschen.
 function handleTopicListClick(event) {
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) {
@@ -278,6 +291,7 @@ function handleTopicListClick(event) {
     }
 }
 
+// Rendert alle Themenkarten inklusive der zugeordneten Beitraege.
 function renderTopics() {
     if (!elements.topicList) {
         return;
@@ -327,6 +341,7 @@ function renderTopics() {
     }).join("");
 }
 
+// Zeigt Bearbeiten/Loeschen nur an, wenn der aktive Benutzer der Autor ist.
 function renderTopicActions(topic) {
     if (!canManageTopic(topic)) {
         return "";
@@ -340,6 +355,7 @@ function renderTopicActions(topic) {
     `;
 }
 
+// Erstellt die HTML-Darstellung für einen einzelnen Beitrag.
 function renderPostCard(post) {
     const authorName = post.author?.username ?? "Gast";
     const createdAt = formatDate(post.createdAt);
@@ -358,6 +374,7 @@ function renderPostCard(post) {
     `;
 }
 
+// Zeigt Beitrag-Aktionen nur für den Autor des Beitrags an.
 function renderPostActions(post) {
     if (!canManagePost(post)) {
         return "";
@@ -371,6 +388,7 @@ function renderPostActions(post) {
     `;
 }
 
+// Fehlerdarstellung, wenn Themen oder Beiträge nicht vom Backend geladen werden konnten.
 function renderTopicsError(error) {
     if (!elements.topicList) {
         return;
@@ -384,6 +402,7 @@ function renderTopicsError(error) {
     `;
 }
 
+// Befüllt das Auswahlfeld im Beitragsformular mit den geladenen Themen.
 function renderTopicOptions() {
     if (!elements.postTopicId) {
         return;
@@ -402,6 +421,7 @@ function renderTopicOptions() {
     }
 }
 
+// Aktualisiert die Anzeige "Aktiver Benutzer". Es wird immer nur ein aktiver User gezeigt.
 function renderCurrentUser() {
     const user = state.currentUser;
 
@@ -439,6 +459,7 @@ function renderCurrentUser() {
     }
 }
 
+// Aktualisiert die kleinen Zähler im Kopfbereich der Startseite.
 function renderStats() {
     if (elements.topicCount) {
         elements.topicCount.textContent = String(state.topics.length);
@@ -453,6 +474,7 @@ function renderStats() {
     }
 }
 
+// Füllt das Themenformular mit vorhandenen Daten, damit ein Thema bearbeitet werden kann.
 function startTopicEdit(topicId) {
     const topic = state.topics.find((entry) => Number(entry.id) === topicId);
     if (!topic || !canManageTopic(topic) || !elements.topicId || !elements.topicTitle || !elements.topicContent || !elements.saveTopicButton || !elements.cancelTopicEditButton) {
@@ -473,6 +495,7 @@ function startTopicEdit(topicId) {
     }
 }
 
+// Füllt  das Beitragsformular mit vorhandenen Daten, damit ein Beitrag bearbeitet werden kann.
 function startPostEdit(postId) {
     const post = state.posts.find((entry) => Number(entry.id) === postId);
     if (!post || !canManagePost(post) || !elements.postId || !elements.postTopicId || !elements.postContent || !elements.savePostButton || !elements.cancelPostEditButton) {
@@ -493,6 +516,7 @@ function startPostEdit(postId) {
     }
 }
 
+// Setzt das Themenformular nach Speichern oder Abbrechen wieder in den Erstellen-Modus.
 function resetTopicForm() {
     state.editingTopicId = null;
 
@@ -506,6 +530,7 @@ function resetTopicForm() {
     elements.cancelTopicEditButton.classList.add("d-none");
 }
 
+// Setzt das Beitragsformular nach Speichern oder Abbrechen wieder in den Erstellen-Modus.
 function resetPostForm() {
     state.editingPostId = null;
 
@@ -519,6 +544,7 @@ function resetPostForm() {
     elements.cancelPostEditButton.classList.add("d-none");
 }
 
+// Verhindert, dass ein Formular im Bearbeitungsmodus bleibt, wenn der Datensatz gelöscht wurde.
 function syncEditorState() {
     if (state.editingTopicId && !state.topics.some((topic) => Number(topic.id) === state.editingTopicId)) {
         resetTopicForm();
@@ -529,6 +555,7 @@ function syncEditorState() {
     }
 }
 
+// Löscht ein Thema nach Rückfrage und lädt danach die Forumdaten neu.
 async function deleteTopic(topicId) {
     const topic = state.topics.find((entry) => Number(entry.id) === topicId);
     if (!topic || !canManageTopic(topic)) {
@@ -556,6 +583,7 @@ async function deleteTopic(topicId) {
     }
 }
 
+// Löscht einen Beitrag nach Rückfrage und lädt danach die Forumdaten neu.
 async function deletePost(postId) {
     const post = state.posts.find((entry) => Number(entry.id) === postId);
     if (!post || !canManagePost(post)) {
@@ -583,14 +611,17 @@ async function deletePost(postId) {
     }
 }
 
+// Prüf, ob der aktive Benutzer das Thema bearbeiten oder loeschen darf.
 function canManageTopic(topic) {
     return canManageEntity(topic.author);
 }
 
+// Prüf, ob der aktive Benutzer den Beitrag bearbeiten oder loeschen darf.
 function canManagePost(post) {
     return canManageEntity(post.author);
 }
 
+// Der Benutzer darf nur eigene Inhalte verwalten.
 function canManageEntity(author) {
     if (!state.currentUser?.id) {
         return false;
@@ -599,12 +630,14 @@ function canManageEntity(author) {
     return Number(author?.id) === Number(state.currentUser.id);
 }
 
+// Schreibt einen kurzen Status in den Kopfbereich der Startseite.
 function updateStatus(message) {
     if (elements.systemStatus) {
         elements.systemStatus.textContent = message;
     }
 }
 
+// Zeigt Bootstrap-Alerts für, Warnung oder Fehler an.
 function showAlert(type, message) {
     if (!elements.alertHost) {
         window.alert(message);
@@ -626,6 +659,7 @@ function showAlert(type, message) {
     }, 5000);
 }
 
+// führt einen Fetch aus und erwartet eine JSON-Antwort.
 async function requestJson(url, options = {}) {
     const response = await fetch(url, options);
 
@@ -642,6 +676,7 @@ async function requestJson(url, options = {}) {
     return response.json();
 }
 
+// führt  einen Fetch aus, wenn keine Antwortdaten benoetigt werden.
 async function requestVoid(url, options = {}) {
     const response = await fetch(url, options);
 
@@ -651,6 +686,7 @@ async function requestVoid(url, options = {}) {
     }
 }
 
+// Deaktiviert Formularfelder während eines laufenden Requests.
 function setFormLoading(form, isLoading) {
     if (!form) {
         return;
@@ -662,18 +698,21 @@ function setFormLoading(form, isLoading) {
     });
 }
 
+// Für Backend-Beziehungen reicht im JSON die ID des Benutzers.
 function buildUserReference(user) {
     return {
         id: user.id
     };
 }
 
+// Für Backend-Beziehungen reicht im JSON die ID des Themas.
 function buildTopicReference(topicId) {
     return {
         id: topicId
     };
 }
 
+// Sortiert neue Themen und Beiträge nach oben.
 function sortByNewest(items) {
     return [...items].sort((left, right) => {
         const leftTime = Date.parse(left.createdAt ?? 0);
@@ -682,6 +721,7 @@ function sortByNewest(items) {
     });
 }
 
+// Formatiert Datumswerte deutsch und lesbar für die Oberfläche.
 function formatDate(value) {
     if (!value) {
         return "Unbekannt";
@@ -698,6 +738,7 @@ function formatDate(value) {
     }).format(date);
 }
 
+// Erstellt einen Zeitstempel im Format, das das Backend problemlos lesen kann.
 function buildTimestamp() {
     const now = new Date();
     const year = now.getFullYear();
@@ -709,11 +750,13 @@ function buildTimestamp() {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
+// Wandelt Formularwerte in eine gültige positive ID um.
 function parseOptionalId(value) {
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+// Schützt die Ausgabe vor HTML-Injektion durch Benutzereingaben.
 function escapeHtml(value) {
     return String(value)
         .replaceAll("&", "&amp;")
@@ -723,6 +766,7 @@ function escapeHtml(value) {
         .replaceAll("'", "&#39;");
 }
 
+// Liest den zuletzt aktiven Benutzer aus dem Browser-Speicher.
 function loadStoredUser() {
     try {
         const stored = window.localStorage.getItem("webforum-current-user");
@@ -732,10 +776,12 @@ function loadStoredUser() {
     }
 }
 
+// Merkt sich den aktiven Benutzer im Browser, damit er nach einem Reload erhalten bleibt.
 function persistUser(user) {
     window.localStorage.setItem("webforum-current-user", JSON.stringify(user));
 }
 
+// Entfernt sensible oder unnötige Felder aus dem Benutzerobjekt des Backends.
 function sanitizeUser(user) {
     return {
         id: user.id,
