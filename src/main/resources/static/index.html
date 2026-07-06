@@ -4,59 +4,197 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Webforum</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
-
 </head>
-<body>
-
-<header class="header">
-    <h1>Webforum</h1>
-    <nav>
-        <a href="#">Start</a>
-        <a href="#">Login</a>
-        <a href="#">Registrieren</a>
-    </nav>
-</header>
-
-<main class="container">
-    <section class="intro">
-        <h2>Willkommen im Webforum</h2>
-        <p>Hier können Nutzer Themen lesen, erstellen und Beiträge verfassen.</p>
-    </section>
-
-    <section class="actions">
-        <button type="button" id="loadTopicsButton">Themen laden</button>
-        <button type="button" id="createTopicButton">Neues Thema</button>
-    </section>
-
-    <section class="topic-form hidden" id="topicForm">
-        <h2>Neues Thema erstellen</h2>
-
-        <form>
-            <label for="topicTitle">Titel des Themas</label>
-            <input type="text" id="topicTitle" placeholder="Titel des Themas">
-
-            <label for="topicContent">Beschreibung</label>
-            <textarea id="topicContent" placeholder="Beschreibung"></textarea>
-
-            <button type="button" id="saveTopicButton">Speichern</button>
-        </form>
-    </section>
-
-    <section class="topics">
-        <h2>Forum-Übersicht</h2>
-        <div id="topicList">
-            <p>Noch keine Themen geladen.</p>
+<body data-page="home">
+<div class="page-shell">
+    <nav class="navbar navbar-expand-lg navbar-dark forum-navbar py-3">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-3" href="index.html">
+                <span class="brand-mark">WF</span>
+                <span>
+                    <span class="d-block brand-title">Webforum</span>
+                    <small class="brand-subtitle">Bootstrap MVP fuer Themen, Beitraege und Registrierung</small>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Navigation umschalten">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNavigation">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-3">
+                    <li class="nav-item"><a class="nav-link" href="#overview">Uebersicht</a></li>
+                    <li class="nav-item"><a class="nav-link" href="auth.html#loginCard">Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#topicComposer">Thema erstellen</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#postComposer">Beitrag schreiben</a></li>
+                    <li class="nav-item"><a class="nav-link" href="auth.html#registerCard">Registrieren</a></li>
+                    <li class="nav-item">
+                        <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" id="refreshButton">Aktualisieren</button>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </section>
-</main>
+    </nav>
 
-<footer class="footer">
-    <p>2026 Webforum MVP</p>
-</footer>
+    <main class="pb-5">
+        <section class="hero-section py-5">
+            <div class="container">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <span class="hero-kicker">Forum Dashboard</span>
+                        <h1 class="display-5 fw-semibold mt-3 mb-3">Diskussionen starten, Antworten sammeln und das Forum im Blick behalten.</h1>
+                        <p class="hero-copy mb-4">Diese Startseite verbindet das Spring-Backend direkt mit einer Bootstrap-Oberflaeche. Login und Registrierung liegen jetzt auf einer eigenen Unterseite, damit das Forum aufgeraeumter bleibt.</p>
+                        <div class="d-flex flex-wrap gap-3">
+                            <a class="btn btn-light btn-lg rounded-pill px-4" href="#topicComposer">Neues Thema</a>
+                            <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="auth.html">Login oder registrieren</a>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="hero-panel shadow-lg">
+                            <div class="row g-3 text-center">
+                                <div class="col-4">
+                                    <div class="stat-card">
+                                        <span class="stat-label">Themen</span>
+                                        <strong class="stat-value" id="topicCount">0</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-card">
+                                        <span class="stat-label">Beitraege</span>
+                                        <strong class="stat-value" id="postCount">0</strong>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-card">
+                                        <span class="stat-label">Aktiver User</span>
+                                        <strong class="stat-value" id="activeUserState">Gast</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-light mb-0 mt-4 status-banner" id="systemStatus" role="status">
+                                Daten werden geladen...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+        <section class="container" id="overview">
+            <div id="alertHost" class="mb-4"></div>
+
+            <div class="row g-4">
+                <div class="col-xl-8">
+                    <div class="content-card content-card-fill p-4 p-lg-5">
+                        <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
+                            <div>
+                                <span class="section-label">Forum-Uebersicht</span>
+                                <h2 class="h3 mb-1">Aktuelle Themen</h2>
+                                <p class="text-secondary mb-0">Alle geladenen Diskussionen inklusive zugehoeriger Beitraege.</p>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary rounded-pill px-4" id="loadTopicsButton">Themen neu laden</button>
+                        </div>
+                        <div id="topicList" class="d-grid gap-3">
+                            <div class="placeholder-panel">
+                                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                                <p class="mb-0">Themen werden geladen...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4 d-flex flex-column gap-4">
+                    <div class="content-card p-4" id="currentUserCard">
+                        <span class="section-label">Session</span>
+                        <h2 class="h4 mb-3">Aktiver Benutzer</h2>
+                        <div id="currentUserPanel" class="small text-secondary">
+                            Noch kein Benutzer aktiv.
+                        </div>
+                    </div>
+
+                    <div class="content-card p-4 p-lg-5" id="authShortcutCard">
+                        <span class="section-label">Benutzerkonto</span>
+                        <h2 class="h4 mb-3">Login und Registrierung</h2>
+                        <p class="small text-secondary mb-3">Beides liegt jetzt auf einer eigenen Unterseite. So bleibt die Startseite uebersichtlicher und du musst am Backend nichts aendern.</p>
+                        <div class="d-grid gap-2">
+                            <a class="btn btn-primary rounded-pill" href="auth.html#loginCard">Zur Auth-Seite</a>
+                            <a class="btn btn-outline-primary rounded-pill" href="auth.html#registerCard">Direkt registrieren</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mt-1">
+                <div class="col-lg-6">
+                    <div class="content-card content-card-fill p-4 p-lg-5" id="topicComposer">
+                        <span class="section-label">Neues Thema</span>
+                        <h2 class="h4 mb-3">Diskussion starten</h2>
+                        <p class="text-secondary">Gaeste koennen Themen lesen. Angemeldete Benutzer duerfen Themen erstellen, bearbeiten und loeschen.</p>
+                        <form id="topicForm" class="row g-3">
+                            <input id="topicId" name="topicId" type="hidden">
+                            <div class="col-12">
+                                <label class="form-label" for="topicTitle">Titel</label>
+                                <input class="form-control" id="topicTitle" name="title" type="text" maxlength="255" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="topicContent">Beschreibung</label>
+                                <textarea class="form-control" id="topicContent" name="content" rows="5" required></textarea>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="form-check form-switch mt-sm-4 pt-sm-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="topicClosed" name="closed">
+                                    <label class="form-check-label" for="topicClosed">Thema sofort schliessen</label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 d-grid">
+                                <button class="btn btn-primary rounded-pill" id="saveTopicButton" type="submit">Thema speichern</button>
+                            </div>
+                            <div class="col-sm-6 d-grid">
+                                <button class="btn btn-outline-secondary rounded-pill d-none" id="cancelTopicEditButton" type="button">Bearbeiten abbrechen</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="content-card content-card-fill p-4 p-lg-5" id="postComposer">
+                        <span class="section-label">Neuer Beitrag</span>
+                        <h2 class="h4 mb-3">Auf Thema antworten</h2>
+                        <p class="text-secondary">Beitraege koennen direkt einem bestehenden Thema zugeordnet, bearbeitet und wieder geloescht werden.</p>
+                        <form id="postForm" class="row g-3">
+                            <input id="postId" name="postId" type="hidden">
+                            <div class="col-12">
+                                <label class="form-label" for="postTopicId">Thema</label>
+                                <select class="form-select" id="postTopicId" name="topicId" required>
+                                    <option value="">Bitte Thema waehlen</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="postContent">Beitrag</label>
+                                <textarea class="form-control" id="postContent" name="content" rows="5" required></textarea>
+                            </div>
+                            <div class="col-sm-6 d-grid">
+                                <button class="btn btn-outline-primary rounded-pill" id="savePostButton" type="submit">Beitrag absenden</button>
+                            </div>
+                            <div class="col-sm-6 d-grid">
+                                <button class="btn btn-outline-secondary rounded-pill d-none" id="cancelPostEditButton" type="button">Bearbeiten abbrechen</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer-section py-4 mt-5">
+        <div class="container d-flex flex-column flex-md-row justify-content-between gap-2">
+            <span>Webforum MVP auf Basis von Spring Boot, H2 und Bootstrap.</span>
+            <span>Frontend aktualisiert fuer den Browser-Test der REST-Endpunkte.</span>
+        </div>
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

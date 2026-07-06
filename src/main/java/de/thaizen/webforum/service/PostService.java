@@ -4,6 +4,7 @@ import de.thaizen.webforum.model.Post;
 import de.thaizen.webforum.repository.PostRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,11 +19,29 @@ public class PostService {
     }
 
     public Post createPost(Post post) {
+        LocalDateTime now = LocalDateTime.now();
+        if (post.getCreatedAt() == null) {
+            post.setCreatedAt(now);
+        }
+        post.setUpdatedAt(now);
         return postRepository.save(post);
     }
 
-    public Post updatePost(Post post) {
-        return postRepository.save(post);
+    public Post updatePost(Long id, Post post) {
+        Post existingPost = findPostById(id);
+
+        existingPost.setContent(post.getContent());
+
+        if (post.getAuthor() != null) {
+            existingPost.setAuthor(post.getAuthor());
+        }
+        if (post.getTopic() != null) {
+            existingPost.setTopic(post.getTopic());
+        }
+
+        existingPost.setUpdatedAt(LocalDateTime.now());
+
+        return postRepository.save(existingPost);
     }
 
     public Post findPostById(long id) {
@@ -36,9 +55,5 @@ public class PostService {
 
     public List<Post> findAllPosts() {
         return postRepository.findAll();
-    }
-
-    public void deletePost(long id) {
-        postRepository.deleteById(id);
     }
 }

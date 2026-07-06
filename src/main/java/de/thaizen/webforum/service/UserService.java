@@ -20,8 +20,13 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User updateUser(User user) {
+    public User updateUser(Long id, User user) {
+        user.setId(id);
         return userRepository.save(user);
+    }
+
+    public Optional<User> login(String username, String password) {
+        return userRepository.findByUsernameAndPasswordHash(username, password);
     }
 
     public List<User> getAllUsers() {

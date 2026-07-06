@@ -31,7 +31,7 @@ public class TopicController {
     // Ruft den Service auf, um ein Thema zu aktualisieren
     @PutMapping("/{id}")
     public Topic updateTopic(@PathVariable Long id, @RequestBody Topic topic) {
-        return topicService.updateTopic(topic);
+        return topicService.updateTopic(id, topic);
     }
     // Löscht ein Thema anhand der ID
     @DeleteMapping("/{id}")

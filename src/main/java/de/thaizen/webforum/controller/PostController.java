@@ -38,7 +38,7 @@ public class PostController {
     // PUT: Beitrag bearbeiten
     @PutMapping("/{id}")
     public Post updatePost(@PathVariable Long id, @RequestBody Post post) {
-        return postService.updatePost(post);
+        return postService.updatePost(id, post);
     }
 
     // DELETE: Beitrag löschen

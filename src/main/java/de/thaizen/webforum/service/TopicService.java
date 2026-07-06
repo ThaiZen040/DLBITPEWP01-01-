@@ -1,56 +1,64 @@
 package de.thaizen.webforum.service;
 
 import de.thaizen.webforum.model.Topic;
+import de.thaizen.webforum.repository.PostRepository;
 import de.thaizen.webforum.repository.TopicRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class TopicService {
-    //Zugriff auf die Datenbank
     private final TopicRepository topicRepository;
+    private final PostRepository postRepository;
 
-    // Dependency Injection
-    public TopicService(TopicRepository topicRepository) {
+    public TopicService(TopicRepository topicRepository, PostRepository postRepository) {
         this.topicRepository = topicRepository;
+        this.postRepository = postRepository;
     }
 
-    // Neues Thema erstellen
     public Topic createTopic(Topic topic) {
+        LocalDateTime now = LocalDateTime.now();
 
-        topic.setCreatedAt(LocalDateTime.now());
-        topic.setUpdatedAt(LocalDateTime.now());
-        topic.setClosed(false);
+        if (topic.getCreatedAt() == null) {
+            topic.setCreatedAt(now);
+        }
+        topic.setUpdatedAt(now);
 
         return topicRepository.save(topic);
     }
 
-    // Alle Themen abrufen
     public List<Topic> getAllTopics() {
         return topicRepository.findAll();
     }
 
-    // Thema anhand der ID finden
     public Topic getTopicById(Long id) {
         return topicRepository.findById(id)
                 .orElse(null);
     }
 
-    // Thema aktualisieren
-    public Topic updateTopic(Topic topic) {
+    public Topic updateTopic(Long id, Topic topic) {
+        Topic existingTopic = topicRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Thema nicht gefunden."));
 
-        topic.setUpdatedAt(LocalDateTime.now());
+        existingTopic.setTitle(topic.getTitle());
+        existingTopic.setContent(topic.getContent());
+        existingTopic.setClosed(topic.isClosed());
 
-        return topicRepository.save(topic);
+        if (topic.getAuthor() != null) {
+            existingTopic.setAuthor(topic.getAuthor());
+        }
+
+        existingTopic.setUpdatedAt(LocalDateTime.now());
+
+        return topicRepository.save(existingTopic);
     }
 
-    // Thema schließen
     public void closeTopic(Long id) {
-
         Topic topic = topicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Beitrag nicht gefunden."));
+                .orElseThrow(() -> new RuntimeException("Thema nicht gefunden."));
 
         topic.setClosed(true);
         topic.setUpdatedAt(LocalDateTime.now());
@@ -58,8 +66,9 @@ public class TopicService {
         topicRepository.save(topic);
     }
 
-    // Thema löschen
+    @Transactional
     public void deleteTopic(Long id) {
+        postRepository.deleteByTopic_Id(id);
         topicRepository.deleteById(id);
     }
 }

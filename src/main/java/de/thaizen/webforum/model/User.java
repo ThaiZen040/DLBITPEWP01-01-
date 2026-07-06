@@ -1,5 +1,6 @@
 package de.thaizen.webforum.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,6 +25,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String passwordHash;
 
     @Column(nullable = false, unique = true, length = 254)
@@ -55,6 +57,10 @@ public class User {
 
     public String getUsername() {
         return username;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getPasswordHash() {
