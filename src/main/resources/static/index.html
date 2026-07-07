@@ -15,7 +15,7 @@
                 <span class="brand-mark">WF</span>
                 <span>
                     <span class="d-block brand-title">Webforum</span>
-                    <small class="brand-subtitle">Bootstrap MVP fuer Themen, Beitraege und Registrierung</small>
+                    <small class="brand-subtitle">Fullstack Projekt mit Springboot und Bootstrap</small>
                 </span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Navigation umschalten">
@@ -23,7 +23,7 @@
             </button>
             <div class="collapse navbar-collapse" id="mainNavigation">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-3">
-                    <li class="nav-item"><a class="nav-link" href="#overview">Uebersicht</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#overview">Übersicht</a></li>
                     <li class="nav-item"><a class="nav-link" href="auth.html#loginCard">Login</a></li>
                     <li class="nav-item"><a class="nav-link" href="#topicComposer">Thema erstellen</a></li>
                     <li class="nav-item"><a class="nav-link" href="#postComposer">Beitrag schreiben</a></li>
@@ -40,7 +40,7 @@
                     <div class="col-lg-7">
                         <span class="hero-kicker">Forum Dashboard</span>
                         <h1 class="display-5 fw-semibold mt-3 mb-3">Diskussionen starten, Antworten sammeln und das Forum im Blick behalten.</h1>
-                        <p class="hero-copy mb-4">Diese Startseite verbindet das Spring-Backend direkt mit einer Bootstrap-Oberflaeche. Login und Registrierung liegen jetzt auf einer eigenen Unterseite, damit das Forum aufgeraeumter bleibt.</p>
+                        <p class="hero-copy mb-4">In Tech, you never stop learning.</p>
                         <div class="d-flex flex-wrap gap-3">
                             <a class="btn btn-light btn-lg rounded-pill px-4" href="#topicComposer">Neues Thema</a>
                             <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="auth.html">Login oder registrieren</a>
@@ -57,7 +57,7 @@
                                 </div>
                                 <div class="col-4">
                                     <div class="stat-card">
-                                        <span class="stat-label">Beitraege</span>
+                                        <span class="stat-label">Beiträge</span>
                                         <strong class="stat-value" id="postCount">0</strong>
                                     </div>
                                 </div>
@@ -85,9 +85,9 @@
                     <div class="content-card content-card-fill p-4 p-lg-5">
                         <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3 mb-4">
                             <div>
-                                <span class="section-label">Forum-Uebersicht</span>
+                                <span class="section-label">Forum-Übersicht</span>
                                 <h2 class="h3 mb-1">Aktuelle Themen</h2>
-                                <p class="text-secondary mb-0">Alle geladenen Diskussionen inklusive zugehoeriger Beitraege.</p>
+                                <p class="text-secondary mb-0">Alle geladenen Diskussionen inklusive zugehöriger Beiträge.</p>
                             </div>
                             <button type="button" class="btn btn-outline-primary rounded-pill px-4" id="loadTopicsButton">Themen neu laden</button>
                         </div>
@@ -112,9 +112,9 @@
                     <div class="content-card p-4 p-lg-5" id="authShortcutCard">
                         <span class="section-label">Benutzerkonto</span>
                         <h2 class="h4 mb-3">Login und Registrierung</h2>
-                        <p class="small text-secondary mb-3">Beides liegt jetzt auf einer eigenen Unterseite. So bleibt die Startseite uebersichtlicher und du musst am Backend nichts aendern.</p>
+                        <p class="small text-secondary mb-3">Klicke hier, um dich zu registrieren.</p>
                         <div class="d-grid gap-2">
-                            <a class="btn btn-primary rounded-pill" href="auth.html#loginCard">Zur Auth-Seite</a>
+                            <a class="btn btn-primary rounded-pill" href="auth.html#loginCard">Login</a>
                             <a class="btn btn-outline-primary rounded-pill" href="auth.html#registerCard">Direkt registrieren</a>
                         </div>
                     </div>
@@ -126,7 +126,7 @@
                     <div class="content-card content-card-fill p-4 p-lg-5" id="topicComposer">
                         <span class="section-label">Neues Thema</span>
                         <h2 class="h4 mb-3">Diskussion starten</h2>
-                        <p class="text-secondary">Gaeste koennen Themen lesen. Angemeldete Benutzer duerfen Themen erstellen, bearbeiten und loeschen.</p>
+                        <p class="text-secondary">Gäste koennen Themen lesen. Angemeldete Benutzer dürfen Themen erstellen, bearbeiten und löschen.</p>
                         <form id="topicForm" class="row g-3">
                             <input id="topicId" name="topicId" type="hidden">
                             <div class="col-12">
@@ -151,13 +151,13 @@
                     <div class="content-card content-card-fill p-4 p-lg-5" id="postComposer">
                         <span class="section-label">Neuer Beitrag</span>
                         <h2 class="h4 mb-3">Auf Thema antworten</h2>
-                        <p class="text-secondary">Beitraege koennen direkt einem bestehenden Thema zugeordnet, bearbeitet und wieder geloescht werden.</p>
+                        <p class="text-secondary">Beiträge koennen direkt einem bestehenden Thema zugeordnet, bearbeitet und wieder gelöscht werden.</p>
                         <form id="postForm" class="row g-3">
                             <input id="postId" name="postId" type="hidden">
                             <div class="col-12">
                                 <label class="form-label" for="postTopicId">Thema</label>
                                 <select class="form-select" id="postTopicId" name="topicId" required>
-                                    <option value="">Bitte Thema waehlen</option>
+                                    <option value="">Bitte Thema wählen</option>
                                 </select>
                             </div>
                             <div class="col-12">
@@ -180,7 +180,7 @@
     <footer class="footer-section py-4 mt-5">
         <div class="container d-flex flex-column flex-md-row justify-content-between gap-2">
             <span>Webforum MVP auf Basis von Spring Boot, H2 und Bootstrap.</span>
-            <span>Frontend fuer Login, Registrierung, Themen und Beitraege.</span>
+            <span>Frontend für Login, Registrierung, Themen und Beiträge.</span>
         </div>
     </footer>
 </div>
