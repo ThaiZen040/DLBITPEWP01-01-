@@ -24,7 +24,9 @@ const elements = {
     currentUserPanel: document.getElementById("currentUserPanel"),
     activeUserState: document.getElementById("activeUserState"),
     loadTopicsButton: document.getElementById("loadTopicsButton"),
+    loginCard: document.getElementById("loginCard"),
     loginForm: document.getElementById("loginForm"),
+    registerCard: document.getElementById("registerCard"),
     registerForm: document.getElementById("registerForm"),
     topicForm: document.getElementById("topicForm"),
     postForm: document.getElementById("postForm"),
@@ -48,6 +50,9 @@ const elements = {
 document.addEventListener("DOMContentLoaded", () => {
     wireEvents();
     renderCurrentUser();
+    // Prueft beim Laden, ob bereits ein User im Browser gespeichert ist.
+    // Falls ja, wird die Auth-Seite sofort in den Zustand "angemeldet" gesetzt.
+    renderAuthPageState();
     renderStats();
 
     if (isForumPage()) {
@@ -129,6 +134,9 @@ async function handleLogin(event) {
         state.currentUser = safeUser;
         persistUser(safeUser);
         renderCurrentUser();
+        // Nach erfolgreichem Login wird aus dem Login-Formular eine Statusanzeige.
+        // Gleichzeitig blendet renderAuthPageState() die Registrierungskarte aus.
+        renderAuthPageState();
         renderStats();
         event.currentTarget.reset();
         showAlert("success", `Willkommen zurueck, ${safeUser.username}.`);
@@ -164,6 +172,9 @@ async function handleRegistration(event) {
         state.currentUser = safeUser;
         persistUser(safeUser);
         renderCurrentUser();
+        // Eine erfolgreiche Registrierung setzt den neuen User direkt als aktiven User.
+        // Deshalb soll auch hier die Registrierung verschwinden und der Login-Status erscheinen.
+        renderAuthPageState();
         renderStats();
         event.currentTarget.reset();
         showAlert("success", `Benutzer ${safeUser.username} wurde erstellt und als aktiver User gesetzt.`);
@@ -457,6 +468,49 @@ function renderCurrentUser() {
     if (elements.activeUserState) {
         elements.activeUserState.textContent = user.username;
     }
+}
+
+/**
+ * Steuert ausschliesslich die Auth-Seite nach Login oder Registrierung.
+ *
+ * Was diese Funktion macht:
+ * - Ohne aktiven User bleibt die Registrierungskarte sichtbar.
+ * - Mit aktivem User wird die Registrierungskarte ausgeblendet.
+ * - Die Login-Karte zeigt dann kein Formular mehr, sondern den Status "Angemeldet".
+ *
+ * Warum die Pruefungen am Anfang wichtig sind:
+ * app.js wird auch auf index.html geladen. Dort gibt es loginCard/registerCard nicht.
+ * Der Guard verhindert deshalb JavaScript-Fehler auf Seiten ohne Auth-Elemente.
+ */
+function renderAuthPageState() {
+    if (pageType !== "auth" || !elements.loginCard || !elements.registerCard) {
+        return;
+    }
+
+    const user = state.currentUser;
+
+    // Kein User im State bedeutet: Gastmodus. Login und Registrierung bleiben nutzbar.
+    if (!user?.id) {
+        elements.registerCard.hidden = false;
+        return;
+    }
+
+    // Sobald ein User angemeldet ist, soll keine zweite Registrierung angezeigt werden.
+    elements.registerCard.hidden = true;
+
+    // Die Werte koennen aus dem Backend oder aus localStorage kommen.
+    // escapeHtml verhindert, dass Benutzerdaten als HTML ausgefuehrt werden.
+    elements.loginCard.innerHTML = `
+        <span class="section-label">Login</span>
+        <h2 class="h4 mb-3">Angemeldet</h2>
+        <p class="small text-secondary mb-3">Du bist aktuell angemeldet.</p>
+        <div class="user-summary">
+            <strong class="d-block">${escapeHtml(user.username)}</strong>
+            <span class="text-secondary">${escapeHtml(user.email ?? "Keine E-Mail")}</span>
+            <div class="small text-secondary mt-3">ID: ${escapeHtml(String(user.id))}</div>
+        </div>
+        <a class="btn btn-primary rounded-pill mt-3 w-100" href="index.html">Zum Forum</a>
+    `;
 }
 
 // Aktualisiert die kleinen Zähler im Kopfbereich der Startseite.
