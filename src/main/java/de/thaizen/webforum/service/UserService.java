@@ -1,5 +1,6 @@
 package de.thaizen.webforum.service;
 
+import de.thaizen.webforum.model.Role;
 import de.thaizen.webforum.model.User;
 import de.thaizen.webforum.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,9 @@ public class UserService {
     }
 
     public User createUser(User user) {
+        if (user.getRole() == null) {
+            user.setRole(Role.USER);
+        }
         return userRepository.save(user);
     }
 

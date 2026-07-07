@@ -12,32 +12,31 @@ public class PostController {
 
     private final PostService postService;
 
-    // Dependency Injection
     public PostController(PostService postService) {
         this.postService = postService;
     }
 
-    // POST: Beitrag erstellen
     @PostMapping
-    public Post createPost(@RequestBody Post post) {
-        return postService.createPost(post);
+    public Post createPost(@RequestHeader(value = "X-User-Id", required = false) Long actorId,
+                           @RequestBody Post post) {
+        return postService.createPost(actorId, post);
     }
 
-    // GET: Alle Beiträge anzeigen
     @GetMapping
     public List<Post> getAllPosts() {
         return postService.findAllPosts();
     }
 
-    // PUT: Beitrag bearbeiten
     @PutMapping("/{id}")
-    public Post updatePost(@PathVariable Long id, @RequestBody Post post) {
-        return postService.updatePost(id, post);
+    public Post updatePost(@RequestHeader(value = "X-User-Id", required = false) Long actorId,
+                           @PathVariable Long id,
+                           @RequestBody Post post) {
+        return postService.updatePost(actorId, id, post);
     }
 
-    // DELETE: Beitrag löschen
     @DeleteMapping("/{id}")
-    public void deletePost(@PathVariable Long id) {
-        postService.deletePost(id);
+    public void deletePost(@RequestHeader(value = "X-User-Id", required = false) Long actorId,
+                           @PathVariable Long id) {
+        postService.deletePost(actorId, id);
     }
 }

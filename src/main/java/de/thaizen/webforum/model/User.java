@@ -3,6 +3,8 @@ package de.thaizen.webforum.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,6 +31,10 @@ public class User {
     @Column(nullable = false, unique = true, length = 254)
     private String email;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -37,10 +43,11 @@ public class User {
     }
 
     // Konstruktor mit Parametern
-    public User(String username, String passwordHash, String email) {
+    public User(String username, String passwordHash, String email, Role role) {
         this.username = username;
         this.passwordHash = passwordHash;
         this.email = email;
+        this.role = role;
     }
 
     // Getter
@@ -64,6 +71,10 @@ public class User {
         return email;
     }
 
+    public Role getRole() {
+        return role;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -81,8 +92,15 @@ public class User {
         this.email = email;
     }
 
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
     @PrePersist
     public void prePersist() {
+        if (role == null) {
+            role = Role.USER;
+        }
         createdAt = LocalDateTime.now();
     }
 }

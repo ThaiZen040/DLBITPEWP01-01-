@@ -7,12 +7,22 @@ const state = {
     editingPostId: null
 };
 
+const apiBaseUrl = resolveApiBaseUrl();
+
 // REST-Endpunkte des Spring-Boot-Backends.
 const endpoints = {
-    topics: "/topics",
-    posts: "/posts",
-    register: "/register",
-    login: "/login"
+    topics: `${apiBaseUrl}/topics`,
+    posts: `${apiBaseUrl}/posts`,
+    register: `${apiBaseUrl}/register`,
+    login: `${apiBaseUrl}/login`
+};
+
+const authHeaderName = "X-User-Id";
+const roleLabels = {
+    GUEST: "Guest",
+    USER: "User",
+    MODERATOR: "Moderator",
+    ADMIN: "Admin"
 };
 
 // Die gleiche JavaScript-Datei wird auf index.html und auth.html benutzt.
@@ -50,7 +60,7 @@ const elements = {
 document.addEventListener("DOMContentLoaded", () => {
     wireEvents();
     renderCurrentUser();
-    // Prueft beim Laden, ob bereits ein User im Browser gespeichert ist.
+    // Prüft beim Laden, ob bereits ein User im Browser gespeichert ist.
     // Falls ja, wird die Auth-Seite sofort in den Zustand "angemeldet" gesetzt.
     renderAuthPageState();
     renderStats();
@@ -83,7 +93,7 @@ function isForumPage() {
     return pageType === "home";
 }
 
-// Laedt Themen und Beitraege parallel vom Backend und aktualisiert danach die Oberflaeche.
+// Lädt Themen und Beiträge parallel vom Backend und aktualisiert danach die Oberfläche.
 async function loadForumData() {
     updateStatus("Daten werden geladen...");
 
@@ -106,7 +116,7 @@ async function loadForumData() {
         renderTopicOptions();
         renderStats();
         updateStatus("Laden fehlgeschlagen.");
-        showAlert("danger", `Forumdaten konnten nicht geladen werden: ${error.message}`);
+        showAlert("danger", `Forumdaten konnten nicht geladen werden: ${formatRequestError(error)}`);
     }
 }
 
@@ -139,9 +149,9 @@ async function handleLogin(event) {
         renderAuthPageState();
         renderStats();
         event.currentTarget.reset();
-        showAlert("success", `Willkommen zurueck, ${safeUser.username}.`);
+        showAlert("success", `Willkommen zurück, ${safeUser.username}.`);
     } catch (error) {
-        showAlert("danger", `Login fehlgeschlagen: ${error.message}`);
+        showAlert("danger", `Login fehlgeschlagen: ${formatRequestError(error)}`);
     } finally {
         setFormLoading(elements.loginForm, false);
     }
@@ -155,7 +165,8 @@ async function handleRegistration(event) {
     const payload = {
         username: formData.get("username").toString().trim(),
         email: formData.get("email").toString().trim(),
-        passwordHash: formData.get("password").toString()
+        passwordHash: formData.get("password").toString(),
+        role: normalizeRole(formData.get("role"))
     };
 
     try {
@@ -179,7 +190,7 @@ async function handleRegistration(event) {
         event.currentTarget.reset();
         showAlert("success", `Benutzer ${safeUser.username} wurde erstellt und als aktiver User gesetzt.`);
     } catch (error) {
-        showAlert("danger", `Registrierung fehlgeschlagen: ${error.message}`);
+        showAlert("danger", `Registrierung fehlgeschlagen: ${formatRequestError(error)}`);
     } finally {
         setFormLoading(elements.registerForm, false);
     }
@@ -213,9 +224,9 @@ async function handleTopicSubmit(event) {
         setFormLoading(elements.topicForm, true);
         await requestJson(url, {
             method,
-            headers: {
+            headers: buildAuthHeaders({
                 "Content-Type": "application/json"
-            },
+            }),
             body: JSON.stringify(payload)
         });
 
@@ -223,7 +234,11 @@ async function handleTopicSubmit(event) {
         await loadForumData();
         showAlert("success", topicId ? "Das Thema wurde aktualisiert." : "Das Thema wurde gespeichert.");
     } catch (error) {
-        showAlert("danger", `Thema konnte nicht gespeichert werden: ${error.message}`);
+        if (expireLocalSessionIfNeeded(error)) {
+            return;
+        }
+
+        showAlert("danger", `Thema konnte nicht gespeichert werden: ${formatRequestError(error)}`);
     } finally {
         setFormLoading(elements.topicForm, false);
     }
@@ -243,7 +258,7 @@ async function handlePostSubmit(event) {
     const selectedTopicId = parseOptionalId(formData.get("topicId"));
 
     if (!selectedTopicId) {
-        showAlert("warning", "Bitte zuerst ein Thema fuer den Beitrag auswaehlen.");
+        showAlert("warning", "Bitte zuerst ein Thema für den Beitrag auswählen.");
         return;
     }
 
@@ -264,9 +279,9 @@ async function handlePostSubmit(event) {
         setFormLoading(elements.postForm, true);
         await requestJson(url, {
             method,
-            headers: {
+            headers: buildAuthHeaders({
                 "Content-Type": "application/json"
-            },
+            }),
             body: JSON.stringify(payload)
         });
 
@@ -274,13 +289,17 @@ async function handlePostSubmit(event) {
         await loadForumData();
         showAlert("success", postId ? "Der Beitrag wurde aktualisiert." : "Der Beitrag wurde gespeichert.");
     } catch (error) {
-        showAlert("danger", `Beitrag konnte nicht gespeichert werden: ${error.message}`);
+        if (expireLocalSessionIfNeeded(error)) {
+            return;
+        }
+
+        showAlert("danger", `Beitrag konnte nicht gespeichert werden: ${formatRequestError(error)}`);
     } finally {
         setFormLoading(elements.postForm, false);
     }
 }
 
-// Wertet Klicks in der Themenliste aus, z. B. Bearbeiten oder Loeschen.
+// Wertet Klicks in der Themenliste aus, z. B. Bearbeiten oder Löschen.
 function handleTopicListClick(event) {
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) {
@@ -302,7 +321,7 @@ function handleTopicListClick(event) {
     }
 }
 
-// Rendert alle Themenkarten inklusive der zugeordneten Beitraege.
+// Rendert alle Themenkarten inklusive der zugeordneten Beiträge.
 function renderTopics() {
     if (!elements.topicList) {
         return;
@@ -319,7 +338,7 @@ function renderTopics() {
 
     elements.topicList.innerHTML = state.topics.map((topic) => {
         const topicPosts = state.posts.filter((post) => Number(post.topic?.id) === Number(topic.id));
-        const authorName = topic.author?.username ?? "Gast";
+        const authorName = topic.author?.username ?? roleLabels.GUEST;
         const createdAt = formatDate(topic.createdAt);
         const updatedAt = formatDate(topic.updatedAt);
 
@@ -331,7 +350,7 @@ function renderTopics() {
                             <span class="badge text-bg-light border">#${topic.id ?? "neu"}</span>
                         </div>
                         <h3 class="h4 mb-2">${escapeHtml(topic.title ?? "Ohne Titel")}</h3>
-                        <p class="topic-meta mb-3">Von ${escapeHtml(authorName)} erstellt am ${createdAt}${updatedAt !== "Unbekannt" ? `, zuletzt aktualisiert ${updatedAt}` : ""}</p>
+                        <p class="topic-meta mb-3">Von ${escapeHtml(authorName)} ${renderRoleBadge(topic.author?.role)} erstellt am ${createdAt}${updatedAt !== "Unbekannt" ? `, zuletzt aktualisiert ${updatedAt}` : ""}</p>
                         <p class="topic-content mb-0">${escapeHtml(topic.content ?? "")}</p>
                     </div>
                     <div class="text-md-end">
@@ -352,7 +371,7 @@ function renderTopics() {
     }).join("");
 }
 
-// Zeigt Bearbeiten/Loeschen nur an, wenn der aktive Benutzer der Autor ist.
+// Zeigt Bearbeiten/Löschen nur an, wenn der aktive Benutzer der Autor ist.
 function renderTopicActions(topic) {
     if (!canManageTopic(topic)) {
         return "";
@@ -361,14 +380,14 @@ function renderTopicActions(topic) {
     return `
         <div class="d-flex flex-wrap justify-content-md-end gap-2">
             <button class="btn btn-sm btn-outline-primary rounded-pill" type="button" data-action="edit-topic" data-topic-id="${topic.id}">Bearbeiten</button>
-            <button class="btn btn-sm btn-outline-danger rounded-pill" type="button" data-action="delete-topic" data-topic-id="${topic.id}">Loeschen</button>
+            <button class="btn btn-sm btn-outline-danger rounded-pill" type="button" data-action="delete-topic" data-topic-id="${topic.id}">Löschen</button>
         </div>
     `;
 }
 
 // Erstellt die HTML-Darstellung für einen einzelnen Beitrag.
 function renderPostCard(post) {
-    const authorName = post.author?.username ?? "Gast";
+    const authorName = post.author?.username ?? roleLabels.GUEST;
     const createdAt = formatDate(post.createdAt);
 
     return `
@@ -376,6 +395,7 @@ function renderPostCard(post) {
             <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-2">
                 <div>
                     <strong>${escapeHtml(authorName)}</strong>
+                    ${renderRoleBadge(post.author?.role)}
                     <span class="post-meta d-block">${createdAt}</span>
                 </div>
                 ${renderPostActions(post)}
@@ -394,7 +414,7 @@ function renderPostActions(post) {
     return `
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-sm btn-outline-primary rounded-pill" type="button" data-action="edit-post" data-post-id="${post.id}">Bearbeiten</button>
-            <button class="btn btn-sm btn-outline-danger rounded-pill" type="button" data-action="delete-post" data-post-id="${post.id}">Loeschen</button>
+            <button class="btn btn-sm btn-outline-danger rounded-pill" type="button" data-action="delete-post" data-post-id="${post.id}">Löschen</button>
         </div>
     `;
 }
@@ -408,7 +428,7 @@ function renderTopicsError(error) {
     elements.topicList.innerHTML = `
         <div class="placeholder-panel">
             <p class="fw-semibold mb-2">Themen konnten nicht geladen werden.</p>
-            <p class="mb-0">${escapeHtml(error.message)}</p>
+            <p class="mb-0">${escapeHtml(formatRequestError(error))}</p>
         </div>
     `;
 }
@@ -420,7 +440,7 @@ function renderTopicOptions() {
     }
 
     const selectedValue = elements.postTopicId.value;
-    const defaultOption = `<option value="">Bitte Thema waehlen</option>`;
+    const defaultOption = `<option value="">Bitte Thema wählen</option>`;
     const options = state.topics.map((topic) => `
         <option value="${topic.id}">#${topic.id} - ${escapeHtml(topic.title ?? "Ohne Titel")}</option>
     `).join("");
@@ -440,12 +460,12 @@ function renderCurrentUser() {
         if (elements.currentUserPanel) {
             elements.currentUserPanel.innerHTML = `
                 <p class="mb-2">Noch kein Benutzer aktiv.</p>
-                <p class="mb-0">Gaeste duerfen das Forum lesen. Mit Login oder Registrierung werden Themen und Beitraege bearbeitbar.</p>
+                <p class="mb-0">Guest liest nur. User erstellt eigene Inhalte. Moderator moderiert alle Beiträge. Admin verwaltet zusätzlich alle Themen.</p>
             `;
         }
 
         if (elements.activeUserState) {
-            elements.activeUserState.textContent = "Gast";
+            elements.activeUserState.textContent = roleLabels.GUEST;
         }
 
         return;
@@ -459,19 +479,21 @@ function renderCurrentUser() {
                         <strong class="d-block">${escapeHtml(user.username)}</strong>
                         <span class="text-secondary">${escapeHtml(user.email ?? "Keine E-Mail")}</span>
                     </div>
+                    ${renderRoleBadge(user.role)}
                 </div>
-                <div class="small text-secondary mt-3">ID: ${escapeHtml(String(user.id))}</div>
+                <div class="small text-secondary mt-3">Rolle: ${escapeHtml(getRoleLabel(user.role))}</div>
+                <div class="small text-secondary">ID: ${escapeHtml(String(user.id))}</div>
             </div>
         `;
     }
 
     if (elements.activeUserState) {
-        elements.activeUserState.textContent = user.username;
+        elements.activeUserState.textContent = `${user.username} | ${getRoleLabel(user.role)}`;
     }
 }
 
 /**
- * Steuert ausschliesslich die Auth-Seite nach Login oder Registrierung.
+ * Steuert ausschließlich die Auth-Seite nach Login oder Registrierung.
  *
  * Was diese Funktion macht:
  * - Ohne aktiven User bleibt die Registrierungskarte sichtbar.
@@ -495,19 +517,26 @@ function renderAuthPageState() {
         return;
     }
 
-    // Sobald ein User angemeldet ist, soll keine zweite Registrierung angezeigt werden.
-    elements.registerCard.hidden = true;
+    // Auch bei aktivem Benutzer bleibt die Registrierung sichtbar,
+    // damit weitere Rollen direkt ausgewählt und getestet werden können.
+    elements.registerCard.hidden = false;
 
-    // Die Werte koennen aus dem Backend oder aus localStorage kommen.
-    // escapeHtml verhindert, dass Benutzerdaten als HTML ausgefuehrt werden.
+    // Die Werte können aus dem Backend oder aus localStorage kommen.
+    // escapeHtml verhindert, dass Benutzerdaten als HTML ausgeführt werden.
     elements.loginCard.innerHTML = `
         <span class="section-label">Login</span>
         <h2 class="h4 mb-3">Angemeldet</h2>
-        <p class="small text-secondary mb-3">Du bist aktuell angemeldet.</p>
+        <p class="small text-secondary mb-3">Du bist aktuell angemeldet. Die Rollenwahl fuer neue Benutzer bleibt unten verfuegbar.</p>
         <div class="user-summary">
-            <strong class="d-block">${escapeHtml(user.username)}</strong>
-            <span class="text-secondary">${escapeHtml(user.email ?? "Keine E-Mail")}</span>
-            <div class="small text-secondary mt-3">ID: ${escapeHtml(String(user.id))}</div>
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <strong class="d-block">${escapeHtml(user.username)}</strong>
+                    <span class="text-secondary">${escapeHtml(user.email ?? "Keine E-Mail")}</span>
+                </div>
+                ${renderRoleBadge(user.role)}
+            </div>
+            <div class="small text-secondary mt-3">Rolle: ${escapeHtml(getRoleLabel(user.role))}</div>
+            <div class="small text-secondary">ID: ${escapeHtml(String(user.id))}</div>
         </div>
         <a class="btn btn-primary rounded-pill mt-3 w-100" href="index.html">Zum Forum</a>
     `;
@@ -524,7 +553,11 @@ function renderStats() {
     }
 
     if (elements.activeUserState) {
-        elements.activeUserState.textContent = state.currentUser?.username ?? "Gast";
+        if (!state.currentUser?.id) {
+            elements.activeUserState.textContent = roleLabels.GUEST;
+        } else {
+            elements.activeUserState.textContent = `${state.currentUser.username} | ${getRoleLabel(state.currentUser.role)}`;
+        }
     }
 }
 
@@ -613,17 +646,18 @@ function syncEditorState() {
 async function deleteTopic(topicId) {
     const topic = state.topics.find((entry) => Number(entry.id) === topicId);
     if (!topic || !canManageTopic(topic)) {
-        showAlert("warning", "Dieses Thema darfst du nicht loeschen.");
+        showAlert("warning", "Dieses Thema darfst du nicht löschen.");
         return;
     }
 
-    if (!window.confirm("Soll dieses Thema wirklich geloescht werden?")) {
+    if (!window.confirm("Soll dieses Thema wirklich gelöscht werden?")) {
         return;
     }
 
     try {
         await requestVoid(`${endpoints.topics}/${topicId}`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: buildAuthHeaders()
         });
 
         if (state.editingTopicId === topicId) {
@@ -631,9 +665,13 @@ async function deleteTopic(topicId) {
         }
 
         await loadForumData();
-        showAlert("info", "Das Thema wurde geloescht.");
+        showAlert("info", "Das Thema wurde gelöscht.");
     } catch (error) {
-        showAlert("danger", `Thema konnte nicht geloescht werden: ${error.message}`);
+        if (expireLocalSessionIfNeeded(error)) {
+            return;
+        }
+
+        showAlert("danger", `Thema konnte nicht gelöscht werden: ${formatRequestError(error)}`);
     }
 }
 
@@ -641,17 +679,18 @@ async function deleteTopic(topicId) {
 async function deletePost(postId) {
     const post = state.posts.find((entry) => Number(entry.id) === postId);
     if (!post || !canManagePost(post)) {
-        showAlert("warning", "Diesen Beitrag darfst du nicht loeschen.");
+        showAlert("warning", "Diesen Beitrag darfst du nicht löschen.");
         return;
     }
 
-    if (!window.confirm("Soll dieser Beitrag wirklich geloescht werden?")) {
+    if (!window.confirm("Soll dieser Beitrag wirklich gelöscht werden?")) {
         return;
     }
 
     try {
         await requestVoid(`${endpoints.posts}/${postId}`, {
-            method: "DELETE"
+            method: "DELETE",
+            headers: buildAuthHeaders()
         });
 
         if (state.editingPostId === postId) {
@@ -659,29 +698,40 @@ async function deletePost(postId) {
         }
 
         await loadForumData();
-        showAlert("info", "Der Beitrag wurde geloescht.");
+        showAlert("info", "Der Beitrag wurde gelöscht.");
     } catch (error) {
-        showAlert("danger", `Beitrag konnte nicht geloescht werden: ${error.message}`);
+        if (expireLocalSessionIfNeeded(error)) {
+            return;
+        }
+
+        showAlert("danger", `Beitrag konnte nicht gelöscht werden: ${formatRequestError(error)}`);
     }
 }
 
-// Prüf, ob der aktive Benutzer das Thema bearbeiten oder loeschen darf.
+// Prüft, ob der aktive Benutzer das Thema bearbeiten oder löschen darf.
 function canManageTopic(topic) {
-    return canManageEntity(topic.author);
-}
-
-// Prüf, ob der aktive Benutzer den Beitrag bearbeiten oder loeschen darf.
-function canManagePost(post) {
-    return canManageEntity(post.author);
-}
-
-// Der Benutzer darf nur eigene Inhalte verwalten.
-function canManageEntity(author) {
     if (!state.currentUser?.id) {
         return false;
     }
 
-    return Number(author?.id) === Number(state.currentUser.id);
+    return hasRole("ADMIN") || isAuthor(state.currentUser, topic.author);
+}
+
+// Prüft, ob der aktive Benutzer den Beitrag bearbeiten oder löschen darf.
+function canManagePost(post) {
+    if (!state.currentUser?.id) {
+        return false;
+    }
+
+    return hasRole("ADMIN") || hasRole("MODERATOR") || isAuthor(state.currentUser, post.author);
+}
+
+function isAuthor(user, author) {
+    return Number(author?.id) === Number(user?.id);
+}
+
+function hasRole(role) {
+    return normalizeRole(state.currentUser?.role) === role;
 }
 
 // Schreibt einen kurzen Status in den Kopfbereich der Startseite.
@@ -703,7 +753,7 @@ function showAlert(type, message) {
     container.innerHTML = `
         <div class="alert alert-${type} alert-dismissible fade show mb-0" role="alert">
             ${escapeHtml(message)}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schliessen"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
         </div>
     `;
 
@@ -719,7 +769,9 @@ async function requestJson(url, options = {}) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+        const error = new Error(errorText || `HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
     }
 
     const contentType = response.headers.get("content-type") ?? "";
@@ -730,14 +782,70 @@ async function requestJson(url, options = {}) {
     return response.json();
 }
 
-// führt  einen Fetch aus, wenn keine Antwortdaten benoetigt werden.
+// führt  einen Fetch aus, wenn keine Antwortdaten benötigt werden.
 async function requestVoid(url, options = {}) {
     const response = await fetch(url, options);
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(errorText || `HTTP ${response.status}`);
+        const error = new Error(errorText || `HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
     }
+}
+
+function resolveApiBaseUrl() {
+    if (window.location.protocol === "file:") {
+        return "http://localhost:8080";
+    }
+
+    return "";
+}
+
+function isBackendUnavailable(error) {
+    return error?.message === "Failed to fetch" || error instanceof TypeError;
+}
+
+function formatRequestError(error) {
+    if (isBackendUnavailable(error)) {
+        if (window.location.protocol === "file:") {
+            return "Backend nicht erreichbar. Bitte Spring Boot starten und die Seite danach neu laden.";
+        }
+
+        return "Backend nicht erreichbar.";
+    }
+
+    return error.message;
+}
+
+function expireLocalSessionIfNeeded(error) {
+    const message = String(error?.message ?? "");
+    const isExpired = error?.status === 401
+        || message.includes("Bitte zuerst einloggen")
+        || message.includes("Benutzer nicht gefunden");
+
+    if (!isExpired) {
+        return false;
+    }
+
+    state.currentUser = null;
+    clearStoredUser();
+    renderCurrentUser();
+    renderAuthPageState();
+    renderStats();
+    showAlert("warning", "Deine lokale Anmeldung ist nicht mehr gültig. Bitte erneut einloggen.");
+    return true;
+}
+
+function buildAuthHeaders(headers = {}) {
+    if (!state.currentUser?.id) {
+        return headers;
+    }
+
+    return {
+        ...headers,
+        [authHeaderName]: String(state.currentUser.id)
+    };
 }
 
 // Deaktiviert Formularfelder während eines laufenden Requests.
@@ -764,6 +872,28 @@ function buildTopicReference(topicId) {
     return {
         id: topicId
     };
+}
+
+function normalizeRole(role) {
+    return roleLabels[role] ? role : "USER";
+}
+
+function getRoleLabel(role) {
+    return roleLabels[role] ?? roleLabels.USER;
+}
+
+function renderRoleBadge(role) {
+    if (!role || role === "GUEST") {
+        return "";
+    }
+
+    const badgeClass = role === "ADMIN"
+        ? "text-bg-danger"
+        : role === "MODERATOR"
+            ? "text-bg-warning"
+            : "text-bg-secondary";
+
+    return `<span class="badge ${badgeClass}">${escapeHtml(getRoleLabel(role))}</span>`;
 }
 
 // Sortiert neue Themen und Beiträge nach oben.
@@ -824,7 +954,7 @@ function escapeHtml(value) {
 function loadStoredUser() {
     try {
         const stored = window.localStorage.getItem("webforum-current-user");
-        return stored ? JSON.parse(stored) : null;
+        return stored ? sanitizeUser(JSON.parse(stored)) : null;
     } catch {
         return null;
     }
@@ -835,12 +965,23 @@ function persistUser(user) {
     window.localStorage.setItem("webforum-current-user", JSON.stringify(user));
 }
 
+function clearStoredUser() {
+    window.localStorage.removeItem("webforum-current-user");
+}
+
 // Entfernt sensible oder unnötige Felder aus dem Benutzerobjekt des Backends.
 function sanitizeUser(user) {
+    if (!user) {
+        return null;
+    }
+
+    const role = normalizeRole(user?.role);
+
     return {
         id: user.id,
         username: user.username,
         email: user.email,
+        role,
         createdAt: user.createdAt
     };
 }
