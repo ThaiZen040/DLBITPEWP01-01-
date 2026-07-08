@@ -18,6 +18,8 @@ const endpoints = {
 };
 
 const authHeaderName = "X-User-Id";
+const storedUserKey = "webforum-current-user";
+const windowNameUserPrefix = "__webforum_current_user__:";
 const roleLabels = {
     GUEST: "Guest",
     USER: "User",
@@ -953,7 +955,16 @@ function escapeHtml(value) {
 // Liest den zuletzt aktiven Benutzer aus dem Browser-Speicher.
 function loadStoredUser() {
     try {
-        const stored = window.localStorage.getItem("webforum-current-user");
+        const stored = window.localStorage.getItem(storedUserKey);
+        if (stored) {
+            return sanitizeUser(JSON.parse(stored));
+        }
+    } catch {
+        // Faellt auf window.name zurueck, wenn localStorage fuer file:// unzuverlaessig ist.
+    }
+
+    try {
+        const stored = loadStoredUserFromWindowName();
         return stored ? sanitizeUser(JSON.parse(stored)) : null;
     } catch {
         return null;
@@ -962,11 +973,35 @@ function loadStoredUser() {
 
 // Merkt sich den aktiven Benutzer im Browser, damit er nach einem Reload erhalten bleibt.
 function persistUser(user) {
-    window.localStorage.setItem("webforum-current-user", JSON.stringify(user));
+    const serializedUser = JSON.stringify(user);
+
+    try {
+        window.localStorage.setItem(storedUserKey, serializedUser);
+    } catch {
+        // file:// kann localStorage je nach Browser blockieren oder trennen.
+    }
+
+    window.name = `${windowNameUserPrefix}${serializedUser}`;
 }
 
 function clearStoredUser() {
-    window.localStorage.removeItem("webforum-current-user");
+    try {
+        window.localStorage.removeItem(storedUserKey);
+    } catch {
+        // Ignorieren, wenn localStorage nicht verfuegbar ist.
+    }
+
+    if (window.name.startsWith(windowNameUserPrefix)) {
+        window.name = "";
+    }
+}
+
+function loadStoredUserFromWindowName() {
+    if (!window.name.startsWith(windowNameUserPrefix)) {
+        return null;
+    }
+
+    return window.name.slice(windowNameUserPrefix.length);
 }
 
 // Entfernt sensible oder unnötige Felder aus dem Benutzerobjekt des Backends.
