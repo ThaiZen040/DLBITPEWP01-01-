@@ -1,7 +1,10 @@
 package de.thaizen.webforum.controller;
 
 import de.thaizen.webforum.model.Post;
+import de.thaizen.webforum.model.User;
+import de.thaizen.webforum.service.SessionAuthService;
 import de.thaizen.webforum.service.PostService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,15 +14,18 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final SessionAuthService sessionAuthService;
 
-    public PostController(PostService postService) {
+    public PostController(PostService postService, SessionAuthService sessionAuthService) {
         this.postService = postService;
+        this.sessionAuthService = sessionAuthService;
     }
 
     @PostMapping
-    public Post createPost(@RequestHeader(value = "X-User-Id", required = false) Long actorId,
+    public Post createPost(HttpServletRequest request,
                            @RequestBody Post post) {
-        return postService.createPost(actorId, post);
+        User actor = sessionAuthService.requireAuthenticatedUser(request);
+        return postService.createPost(actor, post);
     }
 
     @GetMapping
@@ -28,15 +34,17 @@ public class PostController {
     }
 
     @PutMapping("/{id}")
-    public Post updatePost(@RequestHeader(value = "X-User-Id", required = false) Long actorId,
+    public Post updatePost(HttpServletRequest request,
                            @PathVariable Long id,
                            @RequestBody Post post) {
-        return postService.updatePost(actorId, id, post);
+        User actor = sessionAuthService.requireAuthenticatedUser(request);
+        return postService.updatePost(actor, id, post);
     }
 
     @DeleteMapping("/{id}")
-    public void deletePost(@RequestHeader(value = "X-User-Id", required = false) Long actorId,
+    public void deletePost(HttpServletRequest request,
                            @PathVariable Long id) {
-        postService.deletePost(actorId, id);
+        User actor = sessionAuthService.requireAuthenticatedUser(request);
+        postService.deletePost(actor, id);
     }
 }

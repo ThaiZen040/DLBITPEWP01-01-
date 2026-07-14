@@ -4,8 +4,10 @@ import de.thaizen.webforum.model.Topic;
 import de.thaizen.webforum.model.User;
 import de.thaizen.webforum.repository.PostRepository;
 import de.thaizen.webforum.repository.TopicRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,8 +26,7 @@ public class TopicService {
         this.forumPermissionService = forumPermissionService;
     }
 
-    public Topic createTopic(Long actorId, Topic topic) {
-        User actor = forumPermissionService.requireAuthenticatedUser(actorId);
+    public Topic createTopic(User actor, Topic topic) {
         LocalDateTime now = LocalDateTime.now();
 
         if (topic.getCreatedAt() == null) {
@@ -41,10 +42,9 @@ public class TopicService {
         return topicRepository.findAll();
     }
 
-    public Topic updateTopic(Long actorId, Long id, Topic topic) {
-        User actor = forumPermissionService.requireAuthenticatedUser(actorId);
+    public Topic updateTopic(User actor, Long id, Topic topic) {
         Topic existingTopic = topicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Thema nicht gefunden."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Thema nicht gefunden."));
         forumPermissionService.assertCanManageTopic(actor, existingTopic);
 
         existingTopic.setTitle(topic.getTitle());
@@ -56,10 +56,9 @@ public class TopicService {
     }
 
     @Transactional
-    public void deleteTopic(Long actorId, Long id) {
-        User actor = forumPermissionService.requireAuthenticatedUser(actorId);
+    public void deleteTopic(User actor, Long id) {
         Topic existingTopic = topicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Thema nicht gefunden."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Thema nicht gefunden."));
         forumPermissionService.assertCanManageTopic(actor, existingTopic);
 
         postRepository.deleteByTopic_Id(id);

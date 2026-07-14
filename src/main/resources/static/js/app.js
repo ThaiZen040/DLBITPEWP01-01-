@@ -2,9 +2,10 @@
 const state = {
     topics: [],
     posts: [],
-    currentUser: loadStoredUser(),
+    currentUser: null,
     editingTopicId: null,
-    editingPostId: null
+    editingPostId: null,
+    authStateRevision: 0
 };
 
 const apiBaseUrl = resolveApiBaseUrl();
@@ -14,10 +15,11 @@ const endpoints = {
     topics: `${apiBaseUrl}/topics`,
     posts: `${apiBaseUrl}/posts`,
     register: `${apiBaseUrl}/register`,
-    login: `${apiBaseUrl}/login`
+    login: `${apiBaseUrl}/login`,
+    session: `${apiBaseUrl}/session`,
+    logout: `${apiBaseUrl}/logout`
 };
 
-const authHeaderName = "X-User-Id";
 const storedUserKey = "webforum-current-user";
 const windowNameUserPrefix = "__webforum_current_user__:";
 const roleLabels = {
@@ -29,12 +31,18 @@ const roleLabels = {
 
 // Die gleiche JavaScript-Datei wird auf index.html und auth.html benutzt.
 const pageType = document.body?.dataset?.page ?? "home";
+const authTemplates = {
+    loginCard: ""
+};
+
+state.currentUser = loadStoredUser();
 
 // Alle wichtigen DOM-Elemente werden einmal gesammelt, damit die Funktionen lesbarer bleiben.
 const elements = {
     alertHost: document.getElementById("alertHost"),
     currentUserPanel: document.getElementById("currentUserPanel"),
     activeUserState: document.getElementById("activeUserState"),
+    authShortcutCard: document.getElementById("authShortcutCard"),
     loadTopicsButton: document.getElementById("loadTopicsButton"),
     loginCard: document.getElementById("loginCard"),
     loginForm: document.getElementById("loginForm"),
@@ -59,21 +67,25 @@ const elements = {
 };
 
 // Initialisierung nach dem Laden der HTML-Seite.
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    refreshDynamicElements();
+    captureAuthTemplates();
     wireEvents();
     renderCurrentUser();
-    // Prüft beim Laden, ob bereits ein User im Browser gespeichert ist.
-    // Falls ja, wird die Auth-Seite sofort in den Zustand "angemeldet" gesetzt.
     renderAuthPageState();
     renderStats();
+    showStoredFlashMessage();
+
+    await syncCurrentUserFromBackend();
 
     if (isForumPage()) {
-        loadForumData();
+        await loadForumData();
     }
 });
 
 // Verbindet Buttons und Formulare mit den passenden JavaScript-Funktionen.
 function wireEvents() {
+    addListener(document, "click", handleGlobalActionClick);
     addListener(elements.loadTopicsButton, "click", loadForumData);
     addListener(elements.loginForm, "submit", handleLogin);
     addListener(elements.registerForm, "submit", handleRegistration);
@@ -91,8 +103,54 @@ function addListener(element, eventName, handler) {
     }
 }
 
+function refreshDynamicElements() {
+    elements.alertHost = document.getElementById("alertHost");
+    elements.currentUserPanel = document.getElementById("currentUserPanel");
+    elements.activeUserState = document.getElementById("activeUserState");
+    elements.authShortcutCard = document.getElementById("authShortcutCard");
+    elements.loadTopicsButton = document.getElementById("loadTopicsButton");
+    elements.loginCard = document.getElementById("loginCard");
+    elements.loginForm = document.getElementById("loginForm");
+    elements.registerCard = document.getElementById("registerCard");
+    elements.registerForm = document.getElementById("registerForm");
+    elements.topicForm = document.getElementById("topicForm");
+    elements.postForm = document.getElementById("postForm");
+    elements.topicList = document.getElementById("topicList");
+    elements.topicCount = document.getElementById("topicCount");
+    elements.postCount = document.getElementById("postCount");
+    elements.topicId = document.getElementById("topicId");
+    elements.topicTitle = document.getElementById("topicTitle");
+    elements.topicContent = document.getElementById("topicContent");
+    elements.saveTopicButton = document.getElementById("saveTopicButton");
+    elements.cancelTopicEditButton = document.getElementById("cancelTopicEditButton");
+    elements.postId = document.getElementById("postId");
+    elements.postTopicId = document.getElementById("postTopicId");
+    elements.postContent = document.getElementById("postContent");
+    elements.savePostButton = document.getElementById("savePostButton");
+    elements.cancelPostEditButton = document.getElementById("cancelPostEditButton");
+    elements.systemStatus = document.getElementById("systemStatus");
+}
+
+function captureAuthTemplates() {
+    if (pageType === "auth" && elements.loginCard && !authTemplates.loginCard) {
+        authTemplates.loginCard = elements.loginCard.innerHTML;
+    }
+}
+
 function isForumPage() {
     return pageType === "home";
+}
+
+function handleGlobalActionClick(event) {
+    const actionButton = event.target.closest("[data-action]");
+    if (!actionButton) {
+        return;
+    }
+
+    if (actionButton.dataset.action === "logout") {
+        event.preventDefault();
+        handleLogout();
+    }
 }
 
 // Lädt Themen und Beiträge parallel vom Backend und aktualisiert danach die Oberfläche.
@@ -126,14 +184,15 @@ async function loadForumData() {
 async function handleLogin(event) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const payload = {
         username: formData.get("username").toString().trim(),
         password: formData.get("password").toString()
     };
 
     try {
-        setFormLoading(elements.loginForm, true);
+        setFormLoading(form, true);
         const user = await requestJson(endpoints.login, {
             method: "POST",
             headers: {
@@ -143,19 +202,12 @@ async function handleLogin(event) {
         });
 
         const safeUser = sanitizeUser(user);
-        state.currentUser = safeUser;
-        persistUser(safeUser);
-        renderCurrentUser();
-        // Nach erfolgreichem Login wird aus dem Login-Formular eine Statusanzeige.
-        // Gleichzeitig blendet renderAuthPageState() die Registrierungskarte aus.
-        renderAuthPageState();
-        renderStats();
-        event.currentTarget.reset();
-        showAlert("success", `Willkommen zurück, ${safeUser.username}.`);
+        form.reset();
+        await finalizeAuthentication(safeUser, `Willkommen zurück, ${safeUser.username}.`);
     } catch (error) {
         showAlert("danger", `Login fehlgeschlagen: ${formatRequestError(error)}`);
     } finally {
-        setFormLoading(elements.loginForm, false);
+        setFormLoading(form, false);
     }
 }
 
@@ -163,7 +215,8 @@ async function handleLogin(event) {
 async function handleRegistration(event) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const payload = {
         username: formData.get("username").toString().trim(),
         email: formData.get("email").toString().trim(),
@@ -172,7 +225,7 @@ async function handleRegistration(event) {
     };
 
     try {
-        setFormLoading(elements.registerForm, true);
+        setFormLoading(form, true);
         const user = await requestJson(endpoints.register, {
             method: "POST",
             headers: {
@@ -182,20 +235,36 @@ async function handleRegistration(event) {
         });
 
         const safeUser = sanitizeUser(user);
-        state.currentUser = safeUser;
-        persistUser(safeUser);
-        renderCurrentUser();
-        // Eine erfolgreiche Registrierung setzt den neuen User direkt als aktiven User.
-        // Deshalb soll auch hier die Registrierung verschwinden und der Login-Status erscheinen.
-        renderAuthPageState();
-        renderStats();
-        event.currentTarget.reset();
-        showAlert("success", `Benutzer ${safeUser.username} wurde erstellt und als aktiver User gesetzt.`);
+        form.reset();
+        await finalizeAuthentication(safeUser, `Benutzer ${safeUser.username} wurde erstellt und ist jetzt angemeldet.`);
     } catch (error) {
         showAlert("danger", `Registrierung fehlgeschlagen: ${formatRequestError(error)}`);
     } finally {
-        setFormLoading(elements.registerForm, false);
+        setFormLoading(form, false);
     }
+}
+
+async function handleLogout() {
+    try {
+        await requestVoid(endpoints.logout, {
+            method: "POST"
+        });
+    } catch (error) {
+        if (!isBackendUnavailable(error)) {
+            showAlert("danger", `Logout fehlgeschlagen: ${formatRequestError(error)}`);
+            return;
+        }
+    }
+
+    state.authStateRevision += 1;
+    state.currentUser = null;
+    clearStoredUser();
+    renderCurrentUser();
+    renderAuthPageState();
+    renderStats();
+    resetTopicForm();
+    resetPostForm();
+    showAlert("info", "Du wurdest abgemeldet.");
 }
 
 // Erstellt ein neues Thema oder aktualisiert ein bestehendes Thema, wenn gerade editiert wird.
@@ -226,9 +295,9 @@ async function handleTopicSubmit(event) {
         setFormLoading(elements.topicForm, true);
         await requestJson(url, {
             method,
-            headers: buildAuthHeaders({
+            headers: {
                 "Content-Type": "application/json"
-            }),
+            },
             body: JSON.stringify(payload)
         });
 
@@ -281,9 +350,9 @@ async function handlePostSubmit(event) {
         setFormLoading(elements.postForm, true);
         await requestJson(url, {
             method,
-            headers: buildAuthHeaders({
+            headers: {
                 "Content-Type": "application/json"
-            }),
+            },
             body: JSON.stringify(payload)
         });
 
@@ -459,6 +528,10 @@ function renderCurrentUser() {
     const user = state.currentUser;
 
     if (!user?.id) {
+        if (elements.authShortcutCard) {
+            elements.authShortcutCard.hidden = false;
+        }
+
         if (elements.currentUserPanel) {
             elements.currentUserPanel.innerHTML = `
                 <p class="mb-2">Noch kein Benutzer aktiv.</p>
@@ -473,6 +546,10 @@ function renderCurrentUser() {
         return;
     }
 
+    if (elements.authShortcutCard) {
+        elements.authShortcutCard.hidden = true;
+    }
+
     if (elements.currentUserPanel) {
         elements.currentUserPanel.innerHTML = `
             <div class="user-summary">
@@ -485,6 +562,7 @@ function renderCurrentUser() {
                 </div>
                 <div class="small text-secondary mt-3">Rolle: ${escapeHtml(getRoleLabel(user.role))}</div>
                 <div class="small text-secondary">ID: ${escapeHtml(String(user.id))}</div>
+                <button class="btn btn-outline-secondary rounded-pill mt-3 w-100" type="button" data-action="logout">Logout</button>
             </div>
         `;
     }
@@ -513,22 +591,22 @@ function renderAuthPageState() {
 
     const user = state.currentUser;
 
-    // Kein User im State bedeutet: Gastmodus. Login und Registrierung bleiben nutzbar.
     if (!user?.id) {
+        if (authTemplates.loginCard) {
+            elements.loginCard.innerHTML = authTemplates.loginCard;
+        }
         elements.registerCard.hidden = false;
+        refreshDynamicElements();
+        addListener(elements.loginForm, "submit", handleLogin);
         return;
     }
 
-    // Auch bei aktivem Benutzer bleibt die Registrierung sichtbar,
-    // damit weitere Rollen direkt ausgewählt und getestet werden können.
-    elements.registerCard.hidden = false;
+    elements.registerCard.hidden = true;
 
-    // Die Werte können aus dem Backend oder aus localStorage kommen.
-    // escapeHtml verhindert, dass Benutzerdaten als HTML ausgeführt werden.
     elements.loginCard.innerHTML = `
         <span class="section-label">Login</span>
         <h2 class="h4 mb-3">Angemeldet</h2>
-        <p class="small text-secondary mb-3">Du bist aktuell angemeldet. Die Rollenwahl fuer neue Benutzer bleibt unten verfuegbar.</p>
+        <p class="small text-secondary mb-3">Die Anmeldung wurde vom Backend bestaetigt. Du kannst direkt ins Forum wechseln oder dich wieder abmelden.</p>
         <div class="user-summary">
             <div class="d-flex justify-content-between align-items-start gap-3">
                 <div>
@@ -540,8 +618,12 @@ function renderAuthPageState() {
             <div class="small text-secondary mt-3">Rolle: ${escapeHtml(getRoleLabel(user.role))}</div>
             <div class="small text-secondary">ID: ${escapeHtml(String(user.id))}</div>
         </div>
-        <a class="btn btn-primary rounded-pill mt-3 w-100" href="index.html">Zum Forum</a>
+        <div class="d-grid gap-2 mt-3">
+            <a class="btn btn-primary rounded-pill w-100" href="index.html">Zum Forum</a>
+            <button class="btn btn-outline-secondary rounded-pill w-100" type="button" data-action="logout">Logout</button>
+        </div>
     `;
+    refreshDynamicElements();
 }
 
 // Aktualisiert die kleinen Zähler im Kopfbereich der Startseite.
@@ -658,8 +740,7 @@ async function deleteTopic(topicId) {
 
     try {
         await requestVoid(`${endpoints.topics}/${topicId}`, {
-            method: "DELETE",
-            headers: buildAuthHeaders()
+            method: "DELETE"
         });
 
         if (state.editingTopicId === topicId) {
@@ -691,8 +772,7 @@ async function deletePost(postId) {
 
     try {
         await requestVoid(`${endpoints.posts}/${postId}`, {
-            method: "DELETE",
-            headers: buildAuthHeaders()
+            method: "DELETE"
         });
 
         if (state.editingPostId === postId) {
@@ -767,7 +847,10 @@ function showAlert(type, message) {
 
 // führt einen Fetch aus und erwartet eine JSON-Antwort.
 async function requestJson(url, options = {}) {
-    const response = await fetch(url, options);
+    const response = await fetch(url, {
+        credentials: "include",
+        ...options
+    });
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -786,7 +869,10 @@ async function requestJson(url, options = {}) {
 
 // führt  einen Fetch aus, wenn keine Antwortdaten benötigt werden.
 async function requestVoid(url, options = {}) {
-    const response = await fetch(url, options);
+    const response = await fetch(url, {
+        credentials: "include",
+        ...options
+    });
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -830,6 +916,7 @@ function expireLocalSessionIfNeeded(error) {
         return false;
     }
 
+    state.authStateRevision += 1;
     state.currentUser = null;
     clearStoredUser();
     renderCurrentUser();
@@ -839,15 +926,49 @@ function expireLocalSessionIfNeeded(error) {
     return true;
 }
 
-function buildAuthHeaders(headers = {}) {
-    if (!state.currentUser?.id) {
-        return headers;
-    }
+async function syncCurrentUserFromBackend(options = {}) {
+    const { strict = false } = options;
+    const authStateRevision = state.authStateRevision;
 
-    return {
-        ...headers,
-        [authHeaderName]: String(state.currentUser.id)
-    };
+    try {
+        const user = await requestJson(endpoints.session);
+
+        if (authStateRevision !== state.authStateRevision) {
+            return state.currentUser;
+        }
+
+        if (user?.id) {
+            const safeUser = sanitizeUser(user);
+            state.currentUser = safeUser;
+            persistUser(safeUser);
+        } else if (strict || window.location.protocol !== "file:") {
+            state.currentUser = null;
+            clearStoredUser();
+        }
+
+        renderCurrentUser();
+        renderAuthPageState();
+        renderStats();
+        return state.currentUser;
+    } catch (error) {
+        if (authStateRevision !== state.authStateRevision) {
+            return state.currentUser;
+        }
+
+        if (!isBackendUnavailable(error)) {
+            state.currentUser = null;
+            clearStoredUser();
+            renderCurrentUser();
+            renderAuthPageState();
+            renderStats();
+        }
+
+        if (strict) {
+            throw error;
+        }
+
+        return state.currentUser;
+    }
 }
 
 // Deaktiviert Formularfelder während eines laufenden Requests.
@@ -1002,6 +1123,20 @@ function loadStoredUserFromWindowName() {
     }
 
     return window.name.slice(windowNameUserPrefix.length);
+}
+
+async function finalizeAuthentication(user, successMessage) {
+    state.authStateRevision += 1;
+    state.currentUser = user;
+    persistUser(user);
+    renderCurrentUser();
+    renderAuthPageState();
+    renderStats();
+    showAlert("success", successMessage);
+}
+
+function showStoredFlashMessage() {
+    // Flash-Messages werden nicht mehr seitenübergreifend benötigt.
 }
 
 // Entfernt sensible oder unnötige Felder aus dem Benutzerobjekt des Backends.

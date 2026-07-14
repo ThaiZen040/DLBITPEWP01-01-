@@ -4,28 +4,12 @@ import de.thaizen.webforum.model.Post;
 import de.thaizen.webforum.model.Role;
 import de.thaizen.webforum.model.Topic;
 import de.thaizen.webforum.model.User;
-import de.thaizen.webforum.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ForumPermissionService {
-
-    private final UserRepository userRepository;
-
-    public ForumPermissionService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
-    public User requireAuthenticatedUser(Long actorId) {
-        if (actorId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Bitte zuerst einloggen.");
-        }
-
-        return userRepository.findById(actorId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Benutzer nicht gefunden."));
-    }
 
     public void assertCanManageTopic(User actor, Topic topic) {
         if (hasRole(actor, Role.ADMIN) || isAuthor(actor, topic.getAuthor())) {
